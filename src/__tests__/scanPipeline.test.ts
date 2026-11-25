@@ -1,0 +1,255 @@
+import { describe, expect, it, vi } from 'vitest';
+import {
+  buildCanonicalSignString,
+  computeFingerprintFromJwk,
+  exportPublicKeyJwk,
+  generateNonce,
+  generateStudentKeyPair,
+  sha256Hex,
+  signCanonicalString,
+} from '../lib/crypto';
+import {
+  confirmKeyRotationAndRecord,
+  processScannedQr,
+  type ScanPipelineDeps,
+} from '../features/teacher/scan/scanPipeline';
+import type { Attendance, QrPayload, Student } from '../types';
+
+async function createStudentFixture(sid = 'S1001', name = 'Alice Rivera') {
+  const keyPair = await generateStudentKeyPair();
+  const publicKeyJwk = await exportPublicKeyJwk(keyPair.publicKey);
+  const keyFingerprint = await computeFingerprintFromJwk(publicKeyJwk);
+  const selfieThumb = 'AAAAWebPThumbBase64==';
+  const selfieHash = await sha256Hex(selfieThumb);
+
+  const student: Student = {
+    schoolStudentId: sid,
+    name,
+    deviceUid: 'anon-uid-1',
+    publicKeyJwk,
+    keyFingerprint,
+    selfieThumb,
+    selfieHash,
+    registrationTimestamp: 1700000000000,
+    authorizedTeacherUids: [],
+    rotatedKeys: [],
+  };
+
+  return { keyPair, student };
+}
+
+async function signQr(
+  student: Student,
+  privateKey: CryptoKey,
+  ts: number,
+  options?: { img?: string; includePk?: boolean }
+): Promise<{ payload: QrPayload; raw: string }> {
+  const nce = generateNonce();
+  const img = options?.img ?? student.selfieThumb;
+  const imgHash = await sha256Hex(img);
+  const canonical = buildCanonicalSignString({
+    sid: student.schoolStudentId,
+    n: student.name,
+    ts,
+    nce,
+    fp: student.keyFingerprint,
+    imgHash,
+  });
+  const sig = await signCanonicalString(privateKey, canonical);
+  const payload: QrPayload = {
+    v: 1,
+    sid: student.schoolStudentId,
+    n: student.name,
+    ts,
+    nce,
+    fp: student.keyFingerprint,
+    sig,
+    img,
+    ...(options?.includePk ? { pk: student.publicKeyJwk } : {}),
+  };
+  return { payload, raw: JSON.stringify(payload) };
+}
+
+function makeMemoryDeps(overrides?: Partial<ScanPipelineDeps>) {
+  const studentCache = new Map<string, Student>();
+  const attendanceRecords: Attendance[] = [];
+
+  const deps: ScanPipelineDeps = {
+    isOnline: () => true,
+    getCachedStudent: async (sid) => studentCache.get(sid),
+    putCachedStudent: async (st) => {
+      studentCache.set(st.schoolStudentId, st);
+    },
+    registerFirstScan: vi.fn(async (qr) => {
+      const st = studentCache.get(`server:${qr.sid}`);
+      if (!st) throw new Error('Not found');
+      const updated = { ...st, authorizedTeacherUids: ['teacher-1'] };
+      return { status: 'REGISTERED' as const, student: updated };
+    }),
+    approveRotation: vi.fn(async (qr) => {
+      const existing = studentCache.get(qr.sid)!;
+      const updated: Student = {
+        ...existing,
+        publicKeyJwk: qr.pk!,
+        keyFingerprint: qr.fp,
+        selfieThumb: qr.img ?? existing.selfieThumb,
+        selfieHash: await sha256Hex(qr.img ?? existing.selfieThumb),
+        rotatedKeys: [
+          ...existing.rotatedKeys,
+          {
+            fingerprint: existing.keyFingerprint,
+            publicKeyJwk: existing.publicKeyJwk,
+            replacedAt: Date.now(),
+          },
+        ],
+      };
+      return { status: 'ROTATED' as const, student: updated };
+    }),
+    hasAttendanceForToday: async (classId, sessionDate, sid) =>
+      attendanceRecords.some(
+        (r) =>
+          r.classId === classId &&
+          r.sessionDate === sessionDate &&
+          r.schoolStudentId === sid
+      ),
+    saveAttendance: async (record) => {
+      attendanceRecords.push(record);
+    },
+    getEstimatedNowSec: async () => 1712345678,
+    getSessionDate: () => '2026-11-25',
+    ...overrides,
+  };
+
+  return { deps, studentCache, attendanceRecords };
+}
+
+describe('Teacher Scan Pipeline (§7.3 & §14 Acceptance Criteria)', () => {
+  it('rejects first scan when offline and succeeds when online', async () => {
+    const { keyPair, student } = await createStudentFixture();
+    const { raw } = await signQr(student, keyPair.privateKey, 1712345678);
+
+    // Offline first scan
+    const offline = makeMemoryDeps({ isOnline: () => false });
+    const resOffline = await processScannedQr(
+      raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      offline.deps
+    );
+    expect(resOffline.status).toBe('REJECTED');
+    if (resOffline.status === 'REJECTED') {
+      expect(resOffline.reason).toContain('First scan requires internet');
+    }
+
+    // Online first scan
+    const online = makeMemoryDeps({
+      registerFirstScan: vi.fn(async () => ({
+        status: 'REGISTERED' as const,
+        student: { ...student, authorizedTeacherUids: ['teacher-1'] },
+      })),
+    });
+    const resOnline = await processScannedQr(
+      raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      online.deps
+    );
+    expect(resOnline.status).toBe('RECORDED');
+    expect(online.attendanceRecords).toHaveLength(1);
+    expect(await online.deps.getCachedStudent('S1001')).toBeDefined();
+  });
+
+  it('verifies subsequent scans fully offline and ignores duplicate same-day scans', async () => {
+    const { keyPair, student } = await createStudentFixture();
+    const { raw } = await signQr(student, keyPair.privateKey, 1712345678);
+
+    const { deps, studentCache, attendanceRecords } = makeMemoryDeps({
+      isOnline: () => false,
+    });
+    studentCache.set(student.schoolStudentId, student);
+
+    const first = await processScannedQr(
+      raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      deps
+    );
+    expect(first.status).toBe('RECORDED');
+    expect(attendanceRecords).toHaveLength(1);
+
+    const second = await processScannedQr(
+      raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      deps
+    );
+    expect(second.status).toBe('DUPLICATE_IGNORED');
+    expect(attendanceRecords).toHaveLength(1);
+  });
+
+  it('rejects expired QR (>180s) and tampered signatures offline', async () => {
+    const { keyPair, student } = await createStudentFixture();
+    const { deps, studentCache } = makeMemoryDeps({ isOnline: () => false });
+    studentCache.set(student.schoolStudentId, student);
+
+    // Stale QR (200s old)
+    const stale = await signQr(student, keyPair.privateKey, 1712345678 - 200);
+    const staleRes = await processScannedQr(
+      stale.raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      deps
+    );
+    expect(staleRes.status).toBe('REJECTED');
+
+    // Tampered name
+    const fresh = await signQr(student, keyPair.privateKey, 1712345678);
+    const tampered = JSON.stringify({ ...fresh.payload, n: 'Bob Impostor' });
+    const tamperedRes = await processScannedQr(
+      tampered,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      deps
+    );
+    expect(tamperedRes.status).toBe('REJECTED');
+  });
+
+  it('handles key rotation: rejects offline, prompts online, updates key on approve', async () => {
+    const oldFixture = await createStudentFixture('S1001', 'Alice Rivera');
+    const newFixture = await createStudentFixture('S1001', 'Alice Rivera');
+    const newQr = await signQr(
+      newFixture.student,
+      newFixture.keyPair.privateKey,
+      1712345678,
+      { includePk: true }
+    );
+
+    // Offline rotation -> rejected
+    const offline = makeMemoryDeps({ isOnline: () => false });
+    offline.studentCache.set('S1001', oldFixture.student);
+    const resOffline = await processScannedQr(
+      newQr.raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      offline.deps
+    );
+    expect(resOffline.status).toBe('REJECTED');
+    if (resOffline.status === 'REJECTED') {
+      expect(resOffline.reason).toContain('Key rotation requires internet');
+    }
+
+    // Online rotation -> ROTATION_NEEDED -> approve -> RECORDED
+    const online = makeMemoryDeps({ isOnline: () => true });
+    online.studentCache.set('S1001', oldFixture.student);
+    const resPrompt = await processScannedQr(
+      newQr.raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      online.deps
+    );
+    expect(resPrompt.status).toBe('ROTATION_NEEDED');
+
+    const resApproved = await confirmKeyRotationAndRecord(
+      newQr.payload,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      online.deps
+    );
+    expect(resApproved.status).toBe('RECORDED');
+    expect(online.attendanceRecords).toHaveLength(1);
+    const cachedAfter = await online.deps.getCachedStudent('S1001');
+    expect(cachedAfter?.keyFingerprint).toBe(newFixture.student.keyFingerprint);
+    expect(cachedAfter?.rotatedKeys).toHaveLength(1);
+  });
+});
