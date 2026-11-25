@@ -1,6 +1,6 @@
-# ClassAttend — Offline-First Classroom Attendance PWA
+# Class Attendance — Offline-First Classroom Attendance PWA
 
-Production-ready, offline-first Progressive Web App for classroom attendance using rotating cryptographically signed student QR codes and passkey-only teacher authentication.
+Production-ready, offline-first Progressive Web App for classroom attendance using compact rotating ECDSA-signed student QR codes, Firebase Storage HD selfies, and passkey-only teacher authentication. Localized in **English (`en`)** and **Português (Brasil) (`pt-BR`)** with automatic browser detection and a navbar language selector.
 
 - **Live Production URL**: `https://alunos.leobottaro.com` (Cloudflare Workers + Static Assets)
 - **Firebase Project**: `classroom-attendance-a03af` (`southamerica-east1` — São Paulo)
@@ -9,12 +9,13 @@ Production-ready, offline-first Progressive Web App for classroom attendance usi
 
 - **Frontend (`src/`)**: React 19 + TypeScript + Vite + `vite-plugin-pwa` (Workbox precaching for app shell, Firebase SDK, `exceljs`, and `/zxing_reader.wasm`).
 - **Edge Hosting & Proxy (`worker/index.ts`, `wrangler.jsonc`)**: Cloudflare Worker serving static SPA assets and proxying `/time`, `/api/time`, and `/api/passkey/*` same-origin to Firebase Cloud Functions in `southamerica-east1`.
-- **Cryptography (`src/lib/crypto`)**: Non-extractable **ECDSA P-256** student keys stored directly as `CryptoKey` objects in IndexedDB (`idb`). QR codes rotate every 30s and carry an ECDSA signature over `v1|sid|n|ts|nce|fp|sha256Hex(img)`.
+- **Cryptography (`src/lib/crypto`)**: Non-extractable **ECDSA P-256** student keys stored directly as `CryptoKey` objects in IndexedDB (`idb`). Compact QR codes rotate every 30s and carry an ECDSA signature over `v1|sid|n|ts|nce|fp|sh`.
+- **Selfie Storage (`src/lib/image/selfie.ts`, `storage.rules`)**: Student selfies are center-cropped to **512×512 WebP** (≤ 1 MB) and uploaded to Firebase Storage (`selfies/{sid}/{fp}.webp`). Teacher devices download, SHA-256 verify, and cache them locally in IndexedDB (`cache:selfies`) on first scan or key rotation so all subsequent scans work offline.
 - **Time Synchronization (`src/lib/time`, `getServerTime`)**: Estimates server time offset via `GET /time` so device clock drift does not break the 180-second freshness window.
 - **Auth**:
   - **Teachers**: WebAuthn passkeys only (`@simplewebauthn/browser` + `@simplewebauthn/server` in `passkeyAuth` Cloud Function) minting Firebase custom tokens with `{ teacher: true }`. No email, password, or recovery.
   - **Students**: Anonymous Firebase Auth (`signInAnonymously`) at registration only; identified by school ID in signed QR.
-- **Backend (`functions/`)**: Firebase Cloud Functions v2 (`registerFirstScan`, `approveRotation`, `getServerTime`, `passkeyAuth`) in `southamerica-east1`, and strict Firestore Security Rules (`firestore.rules`) that forbid client writes to `students`/`classes` and forbid `list` on `students`.
+- **Backend (`functions/`)**: Firebase Cloud Functions v2 (`registerFirstScan`, `getRotationSelfie`, `approveRotation`, `getServerTime`, `passkeyAuth`) in `southamerica-east1`, plus strict Firestore & Storage security rules (`firestore.rules`, `storage.rules`).
 - **Offline Excel Export (`src/lib/excel`)**: In-browser XLSX generation via `exceljs` from IndexedDB caches (`✓`, `A`, `—`, `Presence %`, optional `Summary` sheet).
 
 ## Local Development & Testing
@@ -41,6 +42,7 @@ npm --prefix functions run build
 
 1. **Firebase Console (`classroom-attendance-a03af`)**:
    - **Firestore Database** in Native mode (`(default)`).
+   - **Firebase Storage** enabled (`classroom-attendance-a03af.firebasestorage.app`).
    - **Authentication → Sign-in method**: enable **Anonymous**.
    - **Authentication → Settings → Authorized domains**: include `alunos.leobottaro.com`.
    - **Google Cloud IAM & APIs (required for `createCustomToken` in `passkeyAuth`)**:
@@ -95,13 +97,13 @@ firebase deploy --only functions --force
 
 If you deploy a new HTTP function URL or change the region, update `FIREBASE_FUNCTIONS_BASE_URL` in [wrangler.jsonc](wrangler.jsonc) and redeploy Cloudflare (`npm run deploy:cf`).
 
-### 3. Updating Firestore Security Rules or Indexes
+### 3. Updating Firestore or Storage Security Rules & Indexes
 
-Applies to changes in [firestore.rules](firestore.rules) or [firestore.indexes.json](firestore.indexes.json):
+Applies to changes in [firestore.rules](firestore.rules), [firestore.indexes.json](firestore.indexes.json), or [storage.rules](storage.rules):
 
 ```bash
 firebase use classroom-attendance-a03af
-firebase deploy --only firestore:rules,firestore:indexes
+firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 
 ### 4. Post-Deploy Smoke Checks

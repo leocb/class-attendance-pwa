@@ -15,28 +15,35 @@ import {
   CheckCircle2,
   ShieldAlert,
   Upload,
+  User,
 } from 'lucide-react';
 import { useApp } from '../../../app/AppProvider';
 import { db } from '../../../lib/firebase/client';
 import {
   callApproveRotation,
+  callGetRotationSelfie,
   callRegisterFirstScan,
 } from '../../../lib/firebase/functions';
+import { ensureStudentSelfieCached } from '../../../lib/firebase/storage';
 import {
   getCachedAttendanceByClassAndDate,
   getCachedClass,
+  getCachedSelfie,
   getCachedStudent,
   putCachedAttendance,
   putCachedAttendanceBatch,
   putCachedClass,
+  putCachedSelfie,
   putCachedStudent,
+  selfieCacheKey,
 } from '../../../lib/idb';
-import { selfieDataUrl } from '../../../lib/image/selfie';
+import { useI18n } from '../../../lib/i18n';
 import { getLocalSessionDate } from '../../../lib/time';
 import type { Attendance, ClassDoc, QrPayload, Student } from '../../../types';
 import {
   confirmKeyRotationAndRecord,
   processScannedQr,
+  type ScanErrorCode,
   type ScanOutcome,
   type ScanPipelineDeps,
 } from './scanPipeline';
@@ -44,11 +51,14 @@ import {
 interface RotationModalState {
   qr: QrPayload;
   storedStudent: Student;
+  storedSelfieDataUrl: string | null;
+  newSelfieDataUrl: string | null;
 }
 
 export function TeacherScanPage() {
   const { classId } = useParams<{ classId: string }>();
   const { user, isOnline } = useApp();
+  const { t } = useI18n();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -61,6 +71,7 @@ export function TeacherScanPage() {
   const [classDoc, setClassDoc] = useState<ClassDoc | null>(null);
   const [todayAttendance, setTodayAttendance] = useState<Attendance[]>([]);
   const [studentMap, setStudentMap] = useState<Record<string, Student>>({});
+  const [selfieUrls, setSelfieUrls] = useState<Record<string, string>>({});
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [statusBanner, setStatusBanner] = useState<{
@@ -69,7 +80,7 @@ export function TeacherScanPage() {
   } | null>(null);
   const [confirmedCard, setConfirmedCard] = useState<{
     student: Student;
-    qr: QrPayload;
+    selfieDataUrl: string | null;
     selfieWarning: boolean;
     firstScan: boolean;
     duplicate?: boolean;
@@ -81,7 +92,30 @@ export function TeacherScanPage() {
   const today = getLocalSessionDate();
   const seenTodayRef = useRef<Set<string>>(new Set());
 
-  // Sync todayAttendance set into ref for instant duplicate checks
+  const formatScanError = useCallback(
+    (code: ScanErrorCode, detail?: string): string => {
+      switch (code) {
+        case 'MALFORMED_QR':
+          return t('errMalformedQr');
+        case 'FIRST_SCAN_OFFLINE':
+          return t('errFirstScanOffline');
+        case 'FIRST_SCAN_FAILED':
+          return detail || t('errFirstScanFailed');
+        case 'ROTATION_OFFLINE':
+          return t('errRotationOffline');
+        case 'INVALID_SIGNATURE':
+          return t('errInvalidSignature');
+        case 'EXPIRED_QR':
+          return t('errExpiredQr');
+        case 'ROTATION_FAILED':
+          return detail || t('errRotationFailed');
+        case 'SELFIE_FETCH_FAILED':
+          return detail || t('errSelfieFetchFailed');
+      }
+    },
+    [t]
+  );
+
   useEffect(() => {
     const next = new Set<string>();
     for (const rec of todayAttendance) {
@@ -90,7 +124,6 @@ export function TeacherScanPage() {
     seenTodayRef.current = next;
   }, [todayAttendance]);
 
-  // Load class + today's attendance + real-time listeners (§7.4)
   useEffect(() => {
     if (!user || !classId) return;
     let active = true;
@@ -137,7 +170,6 @@ export function TeacherScanPage() {
     };
   }, [user, classId, today]);
 
-  // Real-time onSnapshot on students/{sid} for each student in roster (§7.4)
   useEffect(() => {
     if (!classDoc) return;
     const sids = classDoc.studentIds;
@@ -146,18 +178,25 @@ export function TeacherScanPage() {
     let active = true;
     const unsubs: Array<() => void> = [];
 
+    const cacheStudentAndSelfie = async (st: Student) => {
+      if (!active) return;
+      setStudentMap((prev) => ({ ...prev, [st.schoolStudentId]: st }));
+      const url = await ensureStudentSelfieCached(st);
+      if (active && url) {
+        setSelfieUrls((prev) => ({ ...prev, [st.schoolStudentId]: url }));
+      }
+    };
+
     for (const sid of sids) {
       void getCachedStudent(sid).then((cached) => {
-        if (active && cached) {
-          setStudentMap((prev) => ({ ...prev, [sid]: cached }));
-        }
+        if (cached) void cacheStudentAndSelfie(cached);
       });
 
       const unsub = onSnapshot(doc(db, 'students', sid), (snap) => {
         if (!active || !snap.exists()) return;
         const st = snap.data() as Student;
-        setStudentMap((prev) => ({ ...prev, [sid]: st }));
         void putCachedStudent(st);
+        void cacheStudentAndSelfie(st);
       });
       unsubs.push(unsub);
     }
@@ -181,7 +220,39 @@ export function TeacherScanPage() {
         }));
         await putCachedStudent(student);
       },
+      ensureStudentSelfieCached: async (student) => {
+        const mem = selfieUrls[student.schoolStudentId];
+        if (mem) {
+          const cached = await getCachedSelfie(
+            student.schoolStudentId,
+            student.keyFingerprint
+          );
+          if (cached && cached.selfieHash === student.selfieHash) {
+            return mem;
+          }
+        }
+        const url = await ensureStudentSelfieCached(student);
+        if (url) {
+          setSelfieUrls((prev) => ({
+            ...prev,
+            [student.schoolStudentId]: url,
+          }));
+        }
+        return url;
+      },
+      cacheSelfieDataUrl: async (sid, fp, hash, dataUrl) => {
+        setSelfieUrls((prev) => ({ ...prev, [sid]: dataUrl }));
+        await putCachedSelfie({
+          cacheKey: selfieCacheKey(sid, fp),
+          schoolStudentId: sid,
+          keyFingerprint: fp,
+          selfieHash: hash,
+          dataUrl,
+          updatedAt: Date.now(),
+        });
+      },
       registerFirstScan: callRegisterFirstScan,
+      getRotationSelfie: callGetRotationSelfie,
       approveRotation: callApproveRotation,
       hasAttendanceForToday: async (cid, sessionDate, sid) => {
         if (seenTodayRef.current.has(sid)) return true;
@@ -201,47 +272,52 @@ export function TeacherScanPage() {
       },
       classStudentIds: classDoc?.studentIds,
     };
-  }, [studentMap, classDoc?.studentIds]);
+  }, [studentMap, selfieUrls, classDoc?.studentIds]);
 
-  const applyOutcome = useCallback((outcome: ScanOutcome) => {
-    if (outcome.status === 'RECORDED') {
-      navigator.vibrate?.(50);
-      setConfirmedCard({
-        student: outcome.student,
-        qr: outcome.qr,
-        selfieWarning: outcome.selfieWarning,
-        firstScan: outcome.firstScan,
-      });
-      setStatusBanner({
-        type: outcome.selfieWarning ? 'warning' : 'success',
-        message: outcome.firstScan
-          ? `Added ${outcome.student.name} to class and recorded attendance.`
-          : `Attendance recorded for ${outcome.student.name}.`,
-      });
-    } else if (outcome.status === 'DUPLICATE_IGNORED') {
-      setConfirmedCard({
-        student: outcome.student,
-        qr: outcome.qr,
-        selfieWarning: outcome.selfieWarning,
-        firstScan: false,
-        duplicate: true,
-      });
-      setStatusBanner({
-        type: 'warning',
-        message: `${outcome.student.name} is already marked present today (duplicate scan ignored).`,
-      });
-    } else if (outcome.status === 'ROTATION_NEEDED') {
-      setRotationModal({
-        qr: outcome.qr,
-        storedStudent: outcome.storedStudent,
-      });
-    } else {
-      setStatusBanner({
-        type: 'danger',
-        message: outcome.reason,
-      });
-    }
-  }, []);
+  const applyOutcome = useCallback(
+    (outcome: ScanOutcome) => {
+      if (outcome.status === 'RECORDED') {
+        navigator.vibrate?.(50);
+        setConfirmedCard({
+          student: outcome.student,
+          selfieDataUrl: outcome.selfieDataUrl,
+          selfieWarning: outcome.selfieWarning,
+          firstScan: outcome.firstScan,
+        });
+        setStatusBanner({
+          type: outcome.selfieWarning ? 'warning' : 'success',
+          message: outcome.firstScan
+            ? t('scanAddedAndRecorded', { name: outcome.student.name })
+            : t('scanRecorded', { name: outcome.student.name }),
+        });
+      } else if (outcome.status === 'DUPLICATE_IGNORED') {
+        setConfirmedCard({
+          student: outcome.student,
+          selfieDataUrl: outcome.selfieDataUrl,
+          selfieWarning: outcome.selfieWarning,
+          firstScan: false,
+          duplicate: true,
+        });
+        setStatusBanner({
+          type: 'warning',
+          message: t('scanDuplicate', { name: outcome.student.name }),
+        });
+      } else if (outcome.status === 'ROTATION_NEEDED') {
+        setRotationModal({
+          qr: outcome.qr,
+          storedStudent: outcome.storedStudent,
+          storedSelfieDataUrl: outcome.storedSelfieDataUrl,
+          newSelfieDataUrl: outcome.newSelfieDataUrl,
+        });
+      } else {
+        setStatusBanner({
+          type: 'danger',
+          message: formatScanError(outcome.code, outcome.detail),
+        });
+      }
+    },
+    [t, formatScanError]
+  );
 
   const handleDecodedQr = useCallback(
     async (raw: string) => {
@@ -273,7 +349,6 @@ export function TeacherScanPage() {
     [user, classId, rotationModal, buildDeps, applyOutcome]
   );
 
-  // Initialize WASM QR decoder worker + rear camera loop
   useEffect(() => {
     const worker = new Worker(
       new URL('../../../workers/qr-decoder.worker.ts', import.meta.url),
@@ -296,7 +371,7 @@ export function TeacherScanPage() {
 
     const startScanner = async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setCameraError('Camera API unavailable. Upload a QR image to scan.');
+        setCameraError(t('cameraScanErr'));
         return;
       }
       try {
@@ -309,7 +384,7 @@ export function TeacherScanPage() {
           audio: false,
         });
         if (!active) {
-          stream.getTracks().forEach((t) => t.stop());
+          stream.getTracks().forEach((tTrack) => tTrack.stop());
           return;
         }
         streamRef.current = stream;
@@ -319,9 +394,7 @@ export function TeacherScanPage() {
           setCameraReady(true);
         }
       } catch {
-        setCameraError(
-          'Unable to access rear camera. Grant camera permissions or upload a QR image.'
-        );
+        setCameraError(t('cameraScanErr'));
       }
     };
 
@@ -363,11 +436,11 @@ export function TeacherScanPage() {
       window.clearInterval(frameTimer);
       worker.terminate();
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current.getTracks().forEach((tTrack) => tTrack.stop());
         streamRef.current = null;
       }
     };
-  }, [handleDecodedQr]);
+  }, [handleDecodedQr, t]);
 
   const handleImageFileScan = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -411,7 +484,7 @@ export function TeacherScanPage() {
     setRotationModal(null);
     setStatusBanner({
       type: 'danger',
-      message: 'Scan rejected — key mismatch.',
+      message: t('scanRejectedMismatch'),
     });
   };
 
@@ -421,21 +494,22 @@ export function TeacherScanPage() {
         <div className="row">
           <Link to="/teacher/classes" className="btn btn-sm">
             <ArrowLeft size={15} />
-            Classes
+            {t('classes')}
           </Link>
           <div>
             <h1 style={{ margin: 0, fontSize: '1.25rem' }}>
-              {classDoc?.name ?? 'Scan Attendance'}
+              {classDoc?.name ?? t('scanAttendanceTitle')}
             </h1>
             <span className="muted" style={{ fontSize: '0.85rem' }}>
-              Session date: {today} · {todayAttendance.length} present
+              {t('sessionDate')}: {today} · {todayAttendance.length}{' '}
+              {t('presentCount')}
             </span>
           </div>
         </div>
 
         <label className="btn btn-sm" style={{ cursor: 'pointer' }}>
           <Upload size={14} />
-          Scan Photo
+          {t('scanPhoto')}
           <input
             type="file"
             accept="image/*"
@@ -446,10 +520,7 @@ export function TeacherScanPage() {
       </div>
 
       {!isOnline && (
-        <div className="alert alert-warning">
-          Offline mode active: returning students verify and queue locally. First
-          scans and key rotations require internet.
-        </div>
+        <div className="alert alert-warning">{t('offlineScanBanner')}</div>
       )}
 
       {statusBanner && (
@@ -468,13 +539,24 @@ export function TeacherScanPage() {
             borderWidth: 2,
           }}
         >
-          <img
-            src={selfieDataUrl(
-              confirmedCard.qr.img || confirmedCard.student.selfieThumb
-            )}
-            alt={confirmedCard.student.name}
-            className="avatar-lg"
-          />
+          {confirmedCard.selfieDataUrl ? (
+            <img
+              src={confirmedCard.selfieDataUrl}
+              alt={confirmedCard.student.name}
+              className="avatar-lg"
+            />
+          ) : (
+            <div
+              className="avatar-lg"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <User size={40} />
+            </div>
+          )}
           <div className="stack-sm" style={{ flex: 1 }}>
             <div className="row" style={{ gap: '0.45rem' }}>
               <CheckCircle2
@@ -493,13 +575,12 @@ export function TeacherScanPage() {
               ID: {confirmedCard.student.schoolStudentId}
             </div>
             <div className="mono muted" style={{ fontSize: '0.8rem' }}>
-              Key FP: {confirmedCard.student.keyFingerprint}
-              {confirmedCard.duplicate ? ' · Already recorded today' : ''}
+              {t('keyFp')}: {confirmedCard.student.keyFingerprint}
+              {confirmedCard.duplicate ? ` · ${t('alreadyRecordedToday')}` : ''}
             </div>
             {confirmedCard.selfieWarning && (
               <div className="alert alert-warning" style={{ padding: '0.45rem 0.7rem' }}>
-                <AlertTriangle size={14} /> Selfie hash differs from stored record.
-                Verify student&apos;s face visually.
+                <AlertTriangle size={14} /> {t('selfieMismatchWarn')}
               </div>
             )}
           </div>
@@ -523,7 +604,7 @@ export function TeacherScanPage() {
               }}
             >
               <Camera size={20} />
-              Starting camera…
+              {t('startingCamera')}
             </div>
           )}
         </div>
@@ -531,22 +612,23 @@ export function TeacherScanPage() {
           <div className="alert alert-warning">{cameraError}</div>
         )}
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem', textAlign: 'center' }}>
-          Point the camera at the student&apos;s live rotating QR code.
+          {t('scanInstruction')}
         </p>
       </div>
 
       <div className="card stack-sm">
         <h2 style={{ margin: 0, fontSize: '1.05rem' }}>
-          Present Today ({todayAttendance.length})
+          {t('presentToday')} ({todayAttendance.length})
         </h2>
         {todayAttendance.length === 0 ? (
           <p className="muted" style={{ margin: 0 }}>
-            No students scanned yet today.
+            {t('noStudentsScannedToday')}
           </p>
         ) : (
           <div className="stack-sm">
             {todayAttendance.map((att) => {
               const st = studentMap[att.schoolStudentId];
+              const photo = selfieUrls[att.schoolStudentId];
               return (
                 <div
                   key={att.attendanceId}
@@ -558,10 +640,10 @@ export function TeacherScanPage() {
                   }}
                 >
                   <div className="row">
-                    {st?.selfieThumb && (
+                    {photo && (
                       <img
-                        src={selfieDataUrl(st.selfieThumb)}
-                        alt={st.name}
+                        src={photo}
+                        alt={st?.name ?? att.schoolStudentId}
                         className="avatar"
                         style={{ width: 38, height: 38 }}
                       />
@@ -594,38 +676,46 @@ export function TeacherScanPage() {
             <div className="row">
               <ShieldAlert size={24} color="var(--warning)" />
               <h2 style={{ margin: 0, fontSize: '1.15rem' }}>
-                Key Rotation Approval
+                {t('rotationTitle')}
               </h2>
             </div>
 
             <p style={{ margin: 0 }}>
-              This student&apos;s key has changed. Approve new key for{' '}
+              {t('rotationPrompt')}{' '}
               <strong>{rotationModal.storedStudent.name}</strong> (
               <span className="mono">{rotationModal.qr.sid}</span>)?
             </p>
 
             <div className="grid-2" style={{ textAlign: 'center' }}>
               <div className="stack-sm" style={{ alignItems: 'center' }}>
-                <span className="label">Stored Selfie</span>
-                <img
-                  src={selfieDataUrl(rotationModal.storedStudent.selfieThumb)}
-                  alt="Stored student selfie"
-                  className="avatar-lg"
-                />
+                <span className="label">{t('storedSelfie')}</span>
+                {rotationModal.storedSelfieDataUrl ? (
+                  <img
+                    src={rotationModal.storedSelfieDataUrl}
+                    alt="Stored student selfie"
+                    className="avatar-lg"
+                  />
+                ) : (
+                  <div className="avatar-lg" />
+                )}
                 <span className="mono muted" style={{ fontSize: '0.75rem' }}>
-                  Old FP: {rotationModal.storedStudent.keyFingerprint}
+                  {t('oldFp')}: {rotationModal.storedStudent.keyFingerprint}
                 </span>
               </div>
 
               <div className="stack-sm" style={{ alignItems: 'center' }}>
-                <span className="label">New QR Selfie</span>
-                <img
-                  src={selfieDataUrl(rotationModal.qr.img ?? '')}
-                  alt="New QR selfie"
-                  className="avatar-lg"
-                />
+                <span className="label">{t('newQrSelfie')}</span>
+                {rotationModal.newSelfieDataUrl ? (
+                  <img
+                    src={rotationModal.newSelfieDataUrl}
+                    alt="New QR selfie"
+                    className="avatar-lg"
+                  />
+                ) : (
+                  <div className="avatar-lg" />
+                )}
                 <span className="mono muted" style={{ fontSize: '0.75rem' }}>
-                  New FP: {rotationModal.qr.fp}
+                  {t('newFp')}: {rotationModal.qr.fp}
                 </span>
               </div>
             </div>
@@ -637,7 +727,7 @@ export function TeacherScanPage() {
                 onClick={handleRejectRotation}
                 disabled={rotationBusy}
               >
-                Reject
+                {t('reject')}
               </button>
               <button
                 type="button"
@@ -645,7 +735,7 @@ export function TeacherScanPage() {
                 onClick={handleApproveRotation}
                 disabled={rotationBusy}
               >
-                {rotationBusy ? 'Approving…' : 'Approve New Key & Record'}
+                {rotationBusy ? t('approving') : t('approveAndRecord')}
               </button>
             </div>
           </div>

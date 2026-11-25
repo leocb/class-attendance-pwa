@@ -8,17 +8,23 @@ import {
   exportPublicKeyJwk,
   exportSpkiBytes,
   generateStudentKeyPair,
-  sha256Hex,
 } from '../../../lib/crypto';
 import {
   replaceStudentPrivateKeyForRecovery,
   saveStudentProfile,
 } from '../../../lib/idb';
+import { ensureStudentAnonymousAuth } from '../../../lib/firebase/auth';
+import {
+  buildSelfieStoragePath,
+  uploadStudentSelfie,
+} from '../../../lib/firebase/storage';
 import { syncServerOffset } from '../../../lib/time';
+import { useI18n } from '../../../lib/i18n';
 import type { StudentProfile } from '../../../types';
 
 export function StudentRecoverPage() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [schoolStudentId, setSchoolStudentId] = useState('');
   const [name, setName] = useState('');
   const [selfie, setSelfie] = useState<EncodedSelfie | null>(null);
@@ -32,38 +38,55 @@ export function StudentRecoverPage() {
     const sid = schoolStudentId.trim();
     const fullName = name.trim();
     if (!sid || !fullName) {
-      setError('Enter your School Student ID and Full Name.');
+      setError(t('errMissingIdName'));
       return;
     }
     if (!selfie) {
-      setError('Capture a new live selfie so your teacher can verify your identity.');
+      setError(t('errRecoverSelfie'));
       return;
     }
 
     setSubmitting(true);
     try {
       const keyPair = await generateStudentKeyPair();
-      const [spkiBytes, publicKeyJwk, selfieHash] = await Promise.all([
+      const [spkiBytes, publicKeyJwk] = await Promise.all([
         exportSpkiBytes(keyPair.publicKey),
         exportPublicKeyJwk(keyPair.publicKey),
-        sha256Hex(selfie.base64),
       ]);
       const keyFingerprint = await computeFingerprintFromSpki(spkiBytes);
+      const selfiePath = buildSelfieStoragePath(sid, keyFingerprint);
 
-      // §6.3: Generate new keypair locally; DO NOT attempt any Firestore write.
+      // Replace local private key; DO NOT write to Firestore students/{sid}
       await replaceStudentPrivateKeyForRecovery(keyPair.privateKey);
       if (navigator.onLine) {
         await syncServerOffset();
       }
 
+      let deviceUid = 'recovery';
+      let selfieUploaded = false;
+      if (navigator.onLine) {
+        const user = await ensureStudentAnonymousAuth();
+        deviceUid = user.uid;
+        await uploadStudentSelfie({
+          sid,
+          fp: keyFingerprint,
+          deviceUid: user.uid,
+          bytes: selfie.bytes,
+        });
+        selfieUploaded = true;
+      }
+
       const profile: StudentProfile = {
         schoolStudentId: sid,
         name: fullName,
-        deviceUid: 'recovery',
+        deviceUid,
         publicKeyJwk,
         keyFingerprint,
-        selfieThumb: selfie.base64,
-        selfieHash,
+        selfiePath,
+        selfieHash: selfie.sha256Hex,
+        selfieDataUrl: selfie.dataUrl,
+        ...(selfieUploaded ? {} : { selfieBytes: selfie.bytes }),
+        selfieUploaded,
         registrationTimestamp: Date.now(),
         isRecovery: true,
         firestoreSynced: false,
@@ -72,9 +95,7 @@ export function StudentRecoverPage() {
       await saveStudentProfile(profile);
       navigate('/student/qr');
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to prepare key recovery.'
-      );
+      setError(err instanceof Error ? err.message : t('errRecoverFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -85,30 +106,28 @@ export function StudentRecoverPage() {
       <div className="row">
         <KeyRound size={24} />
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.35rem' }}>Student Key Recovery</h1>
+          <h1 style={{ margin: 0, fontSize: '1.35rem' }}>
+            {t('studentRecoverTitle')}
+          </h1>
           <p className="muted" style={{ margin: 0, fontSize: '0.9rem' }}>
-            Lost your phone or cleared browser data? Generate a new device key
-            and show the resulting QR to your teacher.
+            {t('studentRecoverSubtitle')}
           </p>
         </div>
       </div>
 
-      <div className="alert alert-warning">
-        Your teacher must be online the first time they scan your recovered QR
-        so they can review your new selfie and approve the key rotation.
-      </div>
+      <div className="alert alert-warning">{t('studentRecoverWarning')}</div>
 
       {error && <div className="alert alert-danger">{error}</div>}
 
       <form onSubmit={handleRecover} className="stack-md">
         <div>
           <label className="label" htmlFor="recover-sid">
-            School Student ID
+            {t('schoolStudentId')}
           </label>
           <input
             id="recover-sid"
             className="input"
-            placeholder="e.g. A12345678"
+            placeholder={t('schoolStudentIdPlaceholder')}
             value={schoolStudentId}
             onChange={(e) => setSchoolStudentId(e.target.value)}
             required
@@ -117,12 +136,12 @@ export function StudentRecoverPage() {
 
         <div>
           <label className="label" htmlFor="recover-name">
-            Full Name
+            {t('fullName')}
           </label>
           <input
             id="recover-name"
             className="input"
-            placeholder="e.g. Jane Doe"
+            placeholder={t('fullNamePlaceholder')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -137,10 +156,14 @@ export function StudentRecoverPage() {
             className="btn btn-primary"
             disabled={submitting}
           >
-            {submitting ? 'Generating New Key…' : 'Generate Recovery QR'}
+            {submitting ? t('generatingNewKey') : t('generateRecoveryQr')}
           </button>
-          <Link to="/student/register" className="muted" style={{ fontSize: '0.88rem' }}>
-            Back to Registration
+          <Link
+            to="/student/register"
+            className="muted"
+            style={{ fontSize: '0.88rem' }}
+          >
+            {t('backToRegistration')}
           </Link>
         </div>
       </form>

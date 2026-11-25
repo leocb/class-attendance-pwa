@@ -7,9 +7,11 @@ import {
   registerTeacherWithPasskey,
   signInTeacherWithPasskey,
 } from '../../../lib/firebase/auth';
+import { useI18n } from '../../../lib/i18n';
 
 export function TeacherLoginPage() {
   const { isTeacher, isOnline } = useApp();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
   const [busy, setBusy] = useState<'login' | 'register' | null>(null);
@@ -58,26 +60,21 @@ export function TeacherLoginPage() {
         <div className="row">
           <Fingerprint size={28} />
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.35rem' }}>Teacher Passkey Sign In</h1>
+            <h1 style={{ margin: 0, fontSize: '1.35rem' }}>
+              {t('teacherPasskeySignIn')}
+            </h1>
             <p className="muted" style={{ margin: 0, fontSize: '0.9rem' }}>
-              Passkey-only authentication. Once signed in, scanning and Excel
-              export work offline.
+              {t('teacherPasskeySubtitle')}
             </p>
           </div>
         </div>
 
         {!supported && (
-          <div className="alert alert-danger">
-            WebAuthn passkeys are not supported in this browser or context (HTTPS
-            is required).
-          </div>
+          <div className="alert alert-danger">{t('passkeyUnsupported')}</div>
         )}
 
         {!isOnline && (
-          <div className="alert alert-warning">
-            You are currently offline. Signing in with a passkey requires an
-            internet connection to mint a session token.
-          </div>
+          <div className="alert alert-warning">{t('passkeyOffline')}</div>
         )}
 
         {error && <div className="alert alert-danger">{error}</div>}
@@ -89,35 +86,35 @@ export function TeacherLoginPage() {
           onClick={handleLogin}
         >
           <KeyRound size={18} />
-          {busy === 'login' ? 'Waiting for Passkey…' : 'Sign in with Passkey'}
+          {busy === 'login' ? t('waitingPasskey') : t('signInPasskey')}
         </button>
       </div>
 
       <div className="card stack-md">
         <div className="row">
           <UserPlus size={22} />
-          <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Create Teacher Account</h2>
+          <h2 style={{ margin: 0, fontSize: '1.1rem' }}>
+            {t('createTeacherAccount')}
+          </h2>
         </div>
 
         <div className="alert alert-warning row" style={{ alignItems: 'flex-start' }}>
           <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
           <div>
-            <strong>Permanent account warning — no recovery:</strong> There is
-            no email, no password, and no &ldquo;forgot passkey&rdquo; reset. If
-            you delete or lose this passkey, your teacher account and access to
-            your classes are permanently gone.
+            <strong>{t('permanentWarningTitle')}</strong>{' '}
+            {t('permanentWarningBody')}
           </div>
         </div>
 
         <form onSubmit={handleRegister} className="stack-md">
           <div>
             <label className="label" htmlFor="teacher-name">
-              Display Name (shown on your passkey prompt)
+              {t('teacherDisplayNameLabel')}
             </label>
             <input
               id="teacher-name"
               className="input"
-              placeholder="e.g. Prof. Rivera"
+              placeholder={t('teacherDisplayNamePlaceholder')}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
             />
@@ -129,8 +126,8 @@ export function TeacherLoginPage() {
           >
             <Fingerprint size={18} />
             {busy === 'register'
-              ? 'Creating Passkey Account…'
-              : 'Create account with Passkey'}
+              ? t('creatingPasskey')
+              : t('createAccountPasskey')}
           </button>
         </form>
       </div>

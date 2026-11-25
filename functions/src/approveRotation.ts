@@ -5,9 +5,9 @@ import {
   computeFingerprintFromJwk,
   isTimestampFresh,
   qrPayloadSchema,
-  sha256Hex,
   verifyQrSignature,
 } from './crypto';
+import { downloadAndVerifySelfieFromStorage } from './storageHelper';
 
 const requestSchema = z.object({
   qrPayload: qrPayloadSchema,
@@ -37,13 +37,6 @@ export const approveRotation = onCall(async (request) => {
     );
   }
 
-  if (!qrPayload.img) {
-    throw new HttpsError(
-      'invalid-argument',
-      'Rotation QR must include the updated selfie thumbnail.'
-    );
-  }
-
   if (!isTimestampFresh(qrPayload.ts)) {
     throw new HttpsError(
       'failed-precondition',
@@ -66,7 +59,13 @@ export const approveRotation = onCall(async (request) => {
     );
   }
 
-  const newSelfieHash = sha256Hex(qrPayload.img);
+  // Verify the new selfie exists in Firebase Storage and matches signed qrPayload.sh
+  const verifiedSelfie = await downloadAndVerifySelfieFromStorage(
+    qrPayload.sid,
+    qrPayload.fp,
+    qrPayload.sh
+  );
+
   const db = getFirestore();
   const classRef = db.collection('classes').doc(classId);
   const studentRef = db.collection('students').doc(qrPayload.sid);
@@ -119,8 +118,8 @@ export const approveRotation = onCall(async (request) => {
     tx.update(studentRef, {
       publicKeyJwk: cleanNewJwk,
       keyFingerprint: qrPayload.fp,
-      selfieThumb: qrPayload.img,
-      selfieHash: newSelfieHash,
+      selfiePath: verifiedSelfie.path,
+      selfieHash: qrPayload.sh,
       rotatedKeys: nextRotatedKeys,
       authorizedTeacherUids: FieldValue.arrayUnion(teacherUid),
     });
@@ -133,8 +132,8 @@ export const approveRotation = onCall(async (request) => {
       ...existing,
       publicKeyJwk: cleanNewJwk,
       keyFingerprint: qrPayload.fp,
-      selfieThumb: qrPayload.img,
-      selfieHash: newSelfieHash,
+      selfiePath: verifiedSelfie.path,
+      selfieHash: qrPayload.sh,
       rotatedKeys: nextRotatedKeys,
       authorizedTeacherUids,
     };
@@ -143,5 +142,6 @@ export const approveRotation = onCall(async (request) => {
   return {
     status: 'ROTATED' as const,
     student: updatedStudent,
+    selfieDataUrl: verifiedSelfie.dataUrl,
   };
 });

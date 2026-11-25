@@ -3,9 +3,9 @@ import { Camera, RefreshCw, Upload } from 'lucide-react';
 import {
   captureSelfieFromVideo,
   encodeSelfieFromFile,
-  selfieDataUrl,
   type EncodedSelfie,
 } from '../lib/image/selfie';
+import { useI18n } from '../lib/i18n';
 
 interface SelfieCaptureProps {
   value: EncodedSelfie | null;
@@ -13,6 +13,7 @@ interface SelfieCaptureProps {
 }
 
 export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
+  const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -35,12 +36,12 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
   const startCamera = async () => {
     setCameraError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError('Camera API unavailable. Please upload a photo instead.');
+      setCameraError(t('cameraUnavailable'));
       return;
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } },
+        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 } },
         audio: false,
       });
       streamRef.current = stream;
@@ -51,9 +52,7 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
         }
       });
     } catch {
-      setCameraError(
-        'Could not access front camera. Check permissions or upload a photo.'
-      );
+      setCameraError(t('cameraAccessError'));
     }
   };
 
@@ -65,7 +64,7 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
       stopCamera();
     } catch (err) {
       setCameraError(
-        err instanceof Error ? err.message : 'Failed to capture selfie.'
+        err instanceof Error ? err.message : t('selfieProcessError')
       );
     }
   };
@@ -80,25 +79,26 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
       stopCamera();
     } catch (err) {
       setCameraError(
-        err instanceof Error ? err.message : 'Failed to process photo.'
+        err instanceof Error ? err.message : t('selfieDecodeError')
       );
     }
   };
 
   return (
     <div className="stack-sm">
-      <span className="label">Live Selfie Thumbnail (96×96 WebP)</span>
+      <span className="label">{t('selfieLabel')}</span>
 
       {value ? (
         <div className="row" style={{ alignItems: 'center' }}>
           <img
-            src={selfieDataUrl(value.base64)}
+            src={value.dataUrl}
             alt="Captured student selfie"
             className="avatar-lg"
           />
           <div className="stack-sm">
             <span className="muted" style={{ fontSize: '0.85rem' }}>
-              Encoded ({value.byteLength} bytes, {value.mimeType})
+              {t('encodedSummary')} ({(value.byteLength / 1024).toFixed(1)} KB,{' '}
+              {value.mimeType})
             </span>
             <button
               type="button"
@@ -109,7 +109,7 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
               }}
             >
               <RefreshCw size={14} />
-              Retake Selfie
+              {t('retakeSelfie')}
             </button>
           </div>
         </div>
@@ -121,10 +121,10 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
           <div className="row">
             <button type="button" className="btn btn-primary" onClick={handleSnap}>
               <Camera size={16} />
-              Capture Photo
+              {t('capturePhoto')}
             </button>
             <button type="button" className="btn" onClick={stopCamera}>
-              Cancel
+              {t('cancel')}
             </button>
           </div>
         </div>
@@ -132,11 +132,11 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
         <div className="row" style={{ flexWrap: 'wrap' }}>
           <button type="button" className="btn btn-primary" onClick={startCamera}>
             <Camera size={16} />
-            Open Front Camera
+            {t('openFrontCamera')}
           </button>
           <label className="btn" style={{ cursor: 'pointer' }}>
             <Upload size={16} />
-            Take / Upload Photo
+            {t('uploadPhoto')}
             <input
               type="file"
               accept="image/*"

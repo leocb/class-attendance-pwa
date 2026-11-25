@@ -13,7 +13,7 @@ function makeStudent(sid: string, name: string): Student {
     deviceUid: 'u1',
     publicKeyJwk: { kty: 'EC', crv: 'P-256' },
     keyFingerprint: 'ABCD2345',
-    selfieThumb: '',
+    selfiePath: `selfies/${sid}/ABCD2345.webp`,
     selfieHash: '',
     registrationTimestamp: 1,
     authorizedTeacherUids: ['t1'],

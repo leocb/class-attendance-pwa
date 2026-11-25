@@ -16,10 +16,12 @@ import {
   FileSpreadsheet,
   FolderPlus,
   QrCode,
+  User,
   Users,
 } from 'lucide-react';
 import { useApp } from '../../../app/AppProvider';
 import { db } from '../../../lib/firebase/client';
+import { ensureStudentSelfieCached } from '../../../lib/firebase/storage';
 import {
   getAllCachedClasses,
   getCachedAttendanceByClass,
@@ -29,18 +31,20 @@ import {
   putCachedClasses,
   putCachedStudent,
 } from '../../../lib/idb';
-import { selfieDataUrl } from '../../../lib/image/selfie';
+import { useI18n } from '../../../lib/i18n';
 import type { Attendance, ClassDoc, Student } from '../../../types';
 
 interface ClassRosterState {
   loading: boolean;
   students: Student[];
+  selfieUrls: Record<string, string>;
   totalSessions: number;
   countsByStudent: Record<string, number>;
 }
 
 export function TeacherClassesPage() {
   const { user, isOnline } = useApp();
+  const { t } = useI18n();
   const [classes, setClasses] = useState<ClassDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [newClassName, setNewClassName] = useState('');
@@ -53,7 +57,6 @@ export function TeacherClassesPage() {
     if (!user) return;
     let active = true;
 
-    // Seed immediately from IndexedDB so offline cold-start works instantaneously (§9)
     void getAllCachedClasses(user.uid).then((cached) => {
       if (active && cached.length > 0) {
         setClasses(cached.sort((a, b) => b.createdAt - a.createdAt));
@@ -130,12 +133,12 @@ export function TeacherClassesPage() {
       [cls.classId]: prev[cls.classId] ?? {
         loading: true,
         students: [],
+        selfieUrls: {},
         totalSessions: 0,
         countsByStudent: {},
       },
     }));
 
-    // Parallel `get` on students/{sid} (served from Firestore cache / IDB offline) (§7.2)
     const studentResults = await Promise.all(
       cls.studentIds.map(async (sid) => {
         try {
@@ -155,6 +158,17 @@ export function TeacherClassesPage() {
     const students = studentResults
       .filter((s): s is Student => s !== null)
       .sort((a, b) => a.name.localeCompare(b.name));
+
+    const selfieEntries = await Promise.all(
+      students.map(async (st) => {
+        const url = await ensureStudentSelfieCached(st);
+        return [st.schoolStudentId, url] as const;
+      })
+    );
+    const selfieUrls: Record<string, string> = {};
+    for (const [sid, url] of selfieEntries) {
+      if (url) selfieUrls[sid] = url;
+    }
 
     let attendanceRecords: Attendance[] = [];
     try {
@@ -189,6 +203,7 @@ export function TeacherClassesPage() {
       [cls.classId]: {
         loading: false,
         students,
+        selfieUrls,
         totalSessions: sessionDates.size,
         countsByStudent,
       },
@@ -208,14 +223,14 @@ export function TeacherClassesPage() {
     <div className="stack-lg">
       <div className="row-between">
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.4rem' }}>Your Classes</h1>
+          <h1 style={{ margin: 0, fontSize: '1.4rem' }}>{t('yourClasses')}</h1>
           <p className="muted" style={{ margin: 0, fontSize: '0.9rem' }}>
-            Students join a class automatically the first time you scan their QR.
+            {t('classesSubtitle')}
           </p>
         </div>
         <Link to="/teacher/export" className="btn">
           <FileSpreadsheet size={16} />
-          Export XLSX
+          {t('exportXlsx')}
         </Link>
       </div>
 
@@ -223,14 +238,14 @@ export function TeacherClassesPage() {
 
       <form onSubmit={handleCreateClass} className="card stack-sm">
         <label className="label" htmlFor="new-class-name">
-          Create New Class
+          {t('createNewClass')}
         </label>
         <div className="row" style={{ flexWrap: 'wrap' }}>
           <input
             id="new-class-name"
             className="input"
             style={{ flex: 1, minWidth: 200 }}
-            placeholder="e.g. Biology 12 – Group A"
+            placeholder={t('classNamePlaceholder')}
             value={newClassName}
             onChange={(e) => setNewClassName(e.target.value)}
             required
@@ -241,20 +256,19 @@ export function TeacherClassesPage() {
             disabled={creating}
           >
             <FolderPlus size={16} />
-            {creating ? 'Creating…' : 'Create Class'}
+            {creating ? t('creatingClass') : t('createClass')}
           </button>
         </div>
       </form>
 
       {loading ? (
         <div className="card">
-          <p className="muted">Loading classes…</p>
+          <p className="muted">{t('loadingClasses')}</p>
         </div>
       ) : classes.length === 0 ? (
         <div className="card">
           <p className="muted" style={{ margin: 0 }}>
-            No classes yet. Create your first class above, then start scanning
-            student QRs.
+            {t('noClassesYet')}
           </p>
         </div>
       ) : (
@@ -270,7 +284,9 @@ export function TeacherClassesPage() {
                     <h2 style={{ margin: 0, fontSize: '1.15rem' }}>{cls.name}</h2>
                     <span className="muted" style={{ fontSize: '0.85rem' }}>
                       {cls.studentIds.length}{' '}
-                      {cls.studentIds.length === 1 ? 'student' : 'students'}
+                      {cls.studentIds.length === 1
+                        ? t('studentSingular')
+                        : t('studentPlural')}
                     </span>
                   </div>
 
@@ -281,7 +297,7 @@ export function TeacherClassesPage() {
                       onClick={() => toggleRoster(cls)}
                     >
                       <Users size={15} />
-                      Roster
+                      {t('roster')}
                       {isExpanded ? (
                         <ChevronUp size={15} />
                       ) : (
@@ -293,7 +309,7 @@ export function TeacherClassesPage() {
                       className="btn btn-sm btn-primary"
                     >
                       <QrCode size={15} />
-                      Scan Attendance
+                      {t('scanAttendance')}
                     </Link>
                   </div>
                 </div>
@@ -307,16 +323,15 @@ export function TeacherClassesPage() {
                     className="stack-sm"
                   >
                     {roster?.loading ? (
-                      <p className="muted">Loading roster from cache…</p>
+                      <p className="muted">{t('loadingRoster')}</p>
                     ) : !roster || roster.students.length === 0 ? (
                       <p className="muted" style={{ margin: 0 }}>
-                        No students in this class yet. Scan a student&apos;s QR
-                        while online to add them.
+                        {t('noStudentsInClass')}
                       </p>
                     ) : (
                       <div className="stack-sm">
                         <div className="muted" style={{ fontSize: '0.85rem' }}>
-                          Recorded sessions: {roster.totalSessions}
+                          {t('recordedSessions')}: {roster.totalSessions}
                         </div>
                         {roster.students.map((st) => {
                           const attended =
@@ -327,6 +342,7 @@ export function TeacherClassesPage() {
                                   (attended / roster.totalSessions) * 100
                                 )
                               : 0;
+                          const selfieUrl = roster.selfieUrls[st.schoolStudentId];
                           return (
                             <div
                               key={st.schoolStudentId}
@@ -338,12 +354,27 @@ export function TeacherClassesPage() {
                               }}
                             >
                               <div className="row">
-                                <img
-                                  src={selfieDataUrl(st.selfieThumb)}
-                                  alt={st.name}
-                                  className="avatar"
-                                  style={{ width: 42, height: 42 }}
-                                />
+                                {selfieUrl ? (
+                                  <img
+                                    src={selfieUrl}
+                                    alt={st.name}
+                                    className="avatar"
+                                    style={{ width: 42, height: 42 }}
+                                  />
+                                ) : (
+                                  <div
+                                    className="avatar"
+                                    style={{
+                                      width: 42,
+                                      height: 42,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                  >
+                                    <User size={18} />
+                                  </div>
+                                )}
                                 <div>
                                   <div style={{ fontWeight: 600 }}>{st.name}</div>
                                   <div

@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { I18nProvider } from './lib/i18n';
 import { AppProvider } from './app/AppProvider';
 import { Layout } from './app/Layout';
 import { HomePage } from './app/HomePage';
@@ -13,46 +14,48 @@ import { TeacherExportPage } from './features/teacher/export/TeacherExportPage';
 
 export function App() {
   return (
-    <BrowserRouter>
-      <AppProvider>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/student/register" element={<StudentRegisterPage />} />
-            <Route path="/student/qr" element={<StudentQrPage />} />
-            <Route path="/student/recover" element={<StudentRecoverPage />} />
+    <I18nProvider>
+      <BrowserRouter>
+        <AppProvider>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/student/register" element={<StudentRegisterPage />} />
+              <Route path="/student/qr" element={<StudentQrPage />} />
+              <Route path="/student/recover" element={<StudentRecoverPage />} />
 
-            <Route path="/teacher/login" element={<TeacherLoginPage />} />
-            <Route
-              path="/teacher/classes"
-              element={
-                <TeacherGuard>
-                  <TeacherClassesPage />
-                </TeacherGuard>
-              }
-            />
-            <Route
-              path="/teacher/scan/:classId"
-              element={
-                <TeacherGuard>
-                  <TeacherScanPage />
-                </TeacherGuard>
-              }
-            />
-            <Route
-              path="/teacher/export"
-              element={
-                <TeacherGuard>
-                  <TeacherExportPage />
-                </TeacherGuard>
-              }
-            />
+              <Route path="/teacher/login" element={<TeacherLoginPage />} />
+              <Route
+                path="/teacher/classes"
+                element={
+                  <TeacherGuard>
+                    <TeacherClassesPage />
+                  </TeacherGuard>
+                }
+              />
+              <Route
+                path="/teacher/scan/:classId"
+                element={
+                  <TeacherGuard>
+                    <TeacherScanPage />
+                  </TeacherGuard>
+                }
+              />
+              <Route
+                path="/teacher/export"
+                element={
+                  <TeacherGuard>
+                    <TeacherExportPage />
+                  </TeacherGuard>
+                }
+              />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Layout>
-      </AppProvider>
-    </BrowserRouter>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Layout>
+        </AppProvider>
+      </BrowserRouter>
+    </I18nProvider>
   );
 }
 

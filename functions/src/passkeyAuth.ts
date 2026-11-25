@@ -64,7 +64,7 @@ export const passkeyAuth = onRequest({ cors: true }, async (req, res) => {
 
       const uid = `teacher_${crypto.randomUUID()}`;
       const options = await generateRegistrationOptions({
-        rpName: 'ClassAttend',
+        rpName: 'Class Attendance',
         rpID,
         userID: new TextEncoder().encode(uid),
         userName: displayName,

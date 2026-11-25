@@ -9,7 +9,6 @@ import {
   exportPublicKeyJwk,
   exportSpkiBytes,
   generateStudentKeyPair,
-  sha256Hex,
 } from '../../../lib/crypto';
 import {
   getStudentPrivateKey,
@@ -19,11 +18,17 @@ import {
 } from '../../../lib/idb';
 import { ensureStudentAnonymousAuth } from '../../../lib/firebase/auth';
 import { db } from '../../../lib/firebase/client';
+import {
+  buildSelfieStoragePath,
+  uploadStudentSelfie,
+} from '../../../lib/firebase/storage';
 import { syncServerOffset } from '../../../lib/time';
+import { useI18n } from '../../../lib/i18n';
 import type { Student, StudentProfile } from '../../../types';
 
 export function StudentRegisterPage() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [schoolStudentId, setSchoolStudentId] = useState('');
   const [name, setName] = useState('');
   const [selfie, setSelfie] = useState<EncodedSelfie | null>(null);
@@ -53,37 +58,46 @@ export function StudentRegisterPage() {
     const sid = schoolStudentId.trim();
     const fullName = name.trim();
     if (!sid || !fullName) {
-      setError('Please enter both your School Student ID and Full Name.');
+      setError(t('errMissingIdName'));
       return;
     }
     if (!selfie) {
-      setError('Please capture or upload a selfie thumbnail.');
+      setError(t('errMissingSelfie'));
       return;
     }
 
     setSubmitting(true);
     try {
-      // Immutability check (§5.1): refuse to overwrite an existing key on register
       const existingKey = await getStudentPrivateKey();
       if (existingKey) {
-        throw new Error(
-          'A key already exists on this device. Open your QR or use Recovery if needed.'
-        );
+        throw new Error(t('errExistingKey'));
       }
 
       const user = await ensureStudentAnonymousAuth();
       const keyPair = await generateStudentKeyPair();
-      const [spkiBytes, publicKeyJwk, selfieHash] = await Promise.all([
+      const [spkiBytes, publicKeyJwk] = await Promise.all([
         exportSpkiBytes(keyPair.publicKey),
         exportPublicKeyJwk(keyPair.publicKey),
-        sha256Hex(selfie.base64),
       ]);
       const keyFingerprint = await computeFingerprintFromSpki(spkiBytes);
+      const selfiePath = buildSelfieStoragePath(sid, keyFingerprint);
+      const selfieHash = selfie.sha256Hex;
       const registrationTimestamp = Date.now();
 
       await saveStudentPrivateKeyInitial(keyPair.privateKey);
       if (navigator.onLine) {
         await syncServerOffset();
+      }
+
+      let selfieUploaded = false;
+      if (navigator.onLine) {
+        await uploadStudentSelfie({
+          sid,
+          fp: keyFingerprint,
+          deviceUid: user.uid,
+          bytes: selfie.bytes,
+        });
+        selfieUploaded = true;
       }
 
       const studentDoc: Student = {
@@ -92,7 +106,7 @@ export function StudentRegisterPage() {
         deviceUid: user.uid,
         publicKeyJwk,
         keyFingerprint,
-        selfieThumb: selfie.base64,
+        selfiePath,
         selfieHash,
         registrationTimestamp,
         authorizedTeacherUids: [],
@@ -105,8 +119,11 @@ export function StudentRegisterPage() {
         deviceUid: user.uid,
         publicKeyJwk,
         keyFingerprint,
-        selfieThumb: selfie.base64,
+        selfiePath,
         selfieHash,
+        selfieDataUrl: selfie.dataUrl,
+        ...(selfieUploaded ? {} : { selfieBytes: selfie.bytes }),
+        selfieUploaded,
         registrationTimestamp,
         isRecovery: false,
         firestoreSynced: false,
@@ -124,31 +141,22 @@ export function StudentRegisterPage() {
         try {
           await writePromise;
         } catch (err) {
-          // If duplicate registration rejected by Firestore rules, report clearly
           const msg = err instanceof Error ? err.message : String(err);
           if (msg.includes('permission-denied') || msg.includes('PERMISSION_DENIED')) {
-            throw new Error(
-              'This School Student ID is already registered. If you got a new phone or cleared storage, use Key Recovery.'
-            );
+            throw new Error(t('errDuplicateSid'));
           }
-          // Otherwise let offline persistence queue it
           void writePromise.catch(() => {});
         }
       } else {
-        // Offline: Firestore persistence queues the create write automatically (§6.1)
         void writePromise.catch(() => {});
       }
 
-      setSuccessMsg(
-        'Registration complete. Your teacher will add you when they scan your QR.'
-      );
+      setSuccessMsg(t('regSuccess'));
       window.setTimeout(() => {
         navigate('/student/qr');
       }, 900);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Student registration failed.'
-      );
+      setError(err instanceof Error ? err.message : t('errRegFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -157,19 +165,19 @@ export function StudentRegisterPage() {
   if (existingProfile) {
     return (
       <div className="card stack-md">
-        <h2>Student Device Already Registered</h2>
+        <h2>{t('alreadyRegisteredTitle')}</h2>
         <p className="muted">
-          Registered as <strong>{existingProfile.name}</strong> (
-          <span className="mono">{existingProfile.schoolStudentId}</span>). Your
-          non-extractable signing key is locked in this browser.
+          {t('registeredAs')} <strong>{existingProfile.name}</strong> (
+          <span className="mono">{existingProfile.schoolStudentId}</span>).{' '}
+          {t('alreadyRegisteredBody')}
         </p>
         <div className="row">
           <Link to="/student/qr" className="btn btn-primary">
-            Open Live QR
+            {t('openLiveQr')}
           </Link>
           <Link to="/student/recover" className="btn">
             <KeyRound size={16} />
-            Rotate / Recover Key
+            {t('rotateRecoverKey')}
           </Link>
         </div>
       </div>
@@ -181,9 +189,11 @@ export function StudentRegisterPage() {
       <div className="row">
         <ShieldCheck size={24} />
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.35rem' }}>Student Registration</h1>
+          <h1 style={{ margin: 0, fontSize: '1.35rem' }}>
+            {t('studentRegistration')}
+          </h1>
           <p className="muted" style={{ margin: 0, fontSize: '0.9rem' }}>
-            One-time setup. Your signing key never leaves this device.
+            {t('studentRegSubtitle')}
           </p>
         </div>
       </div>
@@ -194,12 +204,12 @@ export function StudentRegisterPage() {
       <form onSubmit={handleSubmit} className="stack-md">
         <div>
           <label className="label" htmlFor="sid">
-            School Student ID
+            {t('schoolStudentId')}
           </label>
           <input
             id="sid"
             className="input"
-            placeholder="e.g. A12345678"
+            placeholder={t('schoolStudentIdPlaceholder')}
             value={schoolStudentId}
             onChange={(e) => setSchoolStudentId(e.target.value)}
             required
@@ -208,12 +218,12 @@ export function StudentRegisterPage() {
 
         <div>
           <label className="label" htmlFor="fullName">
-            Full Name
+            {t('fullName')}
           </label>
           <input
             id="fullName"
             className="input"
-            placeholder="e.g. Jane Doe"
+            placeholder={t('fullNamePlaceholder')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -228,10 +238,14 @@ export function StudentRegisterPage() {
             className="btn btn-primary"
             disabled={submitting}
           >
-            {submitting ? 'Generating Key & Registering…' : 'Complete Registration'}
+            {submitting ? t('generatingKey') : t('completeRegistration')}
           </button>
-          <Link to="/student/recover" className="muted" style={{ fontSize: '0.88rem' }}>
-            Lost phone or cleared data? Recover key
+          <Link
+            to="/student/recover"
+            className="muted"
+            style={{ fontSize: '0.88rem' }}
+          >
+            {t('lostPhoneLink')}
           </Link>
         </div>
       </form>

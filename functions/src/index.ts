@@ -6,5 +6,6 @@ setGlobalOptions({ region: 'southamerica-east1' });
 
 export { registerFirstScan } from './registerFirstScan';
 export { approveRotation } from './approveRotation';
+export { getRotationSelfie } from './getRotationSelfie';
 export { getServerTime } from './getServerTime';
 export { passkeyAuth } from './passkeyAuth';

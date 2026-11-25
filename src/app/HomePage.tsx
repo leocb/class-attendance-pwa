@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { Fingerprint, GraduationCap, KeyRound, QrCode, UserCheck } from 'lucide-react';
 import { useApp } from './AppProvider';
 import { getStudentProfile } from '../lib/idb';
+import { useI18n } from '../lib/i18n';
 import type { StudentProfile } from '../types';
 
 export function HomePage() {
   const { isTeacher } = useApp();
+  const { t } = useI18n();
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(
     null
   );
@@ -20,13 +22,9 @@ export function HomePage() {
   return (
     <div className="stack-lg">
       <div className="card stack-sm">
-        <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
-          Offline-First Classroom Attendance
-        </h1>
+        <h1 style={{ margin: 0, fontSize: '1.5rem' }}>{t('homeTitle')}</h1>
         <p className="muted" style={{ margin: 0 }}>
-          Cryptographically signed, rotating 30-second student QR codes scanned
-          by passkey-authenticated teachers. Works completely offline after
-          one-time student–teacher registration.
+          {t('homeSubtitle')}
         </p>
       </div>
 
@@ -34,28 +32,27 @@ export function HomePage() {
         <div className="card stack-md">
           <div className="row">
             <QrCode size={24} color="var(--primary)" />
-            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Student</h2>
+            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('studentTitle')}</h2>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: '0.92rem' }}>
-            Register once with your school ID and selfie, then display your live
-            signed QR code for attendance.
+            {t('studentDesc')}
           </p>
 
           <div className="stack-sm">
             {studentProfile ? (
               <Link to="/student/qr" className="btn btn-primary">
                 <QrCode size={16} />
-                Show My Live QR ({studentProfile.name})
+                {t('showMyLiveQr')} ({studentProfile.name})
               </Link>
             ) : (
               <Link to="/student/register" className="btn btn-primary">
                 <UserCheck size={16} />
-                Student Registration
+                {t('studentRegistration')}
               </Link>
             )}
             <Link to="/student/recover" className="btn">
               <KeyRound size={16} />
-              Lost Phone / Key Recovery
+              {t('lostPhoneRecover')}
             </Link>
           </div>
         </div>
@@ -63,23 +60,22 @@ export function HomePage() {
         <div className="card stack-md">
           <div className="row">
             <GraduationCap size={24} color="var(--success)" />
-            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Teacher</h2>
+            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('teacherTitle')}</h2>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: '0.92rem' }}>
-            Sign in with a hardware or platform passkey, manage classes, scan
-            student QRs offline, and export XLSX reports.
+            {t('teacherDesc')}
           </p>
 
           <div className="stack-sm">
             {isTeacher ? (
               <Link to="/teacher/classes" className="btn btn-primary">
                 <GraduationCap size={16} />
-                Open Teacher Classes
+                {t('openTeacherClasses')}
               </Link>
             ) : (
               <Link to="/teacher/login" className="btn btn-primary">
                 <Fingerprint size={16} />
-                Teacher Passkey Sign In
+                {t('teacherPasskeySignIn')}
               </Link>
             )}
           </div>
@@ -87,11 +83,9 @@ export function HomePage() {
       </div>
 
       <div className="card stack-sm">
-        <strong>Install as PWA</strong>
+        <strong>{t('installPwaTitle')}</strong>
         <p className="muted" style={{ margin: 0, fontSize: '0.88rem' }}>
-          On iOS Safari tap <strong>Share → Add to Home Screen</strong>. On
-          Android Chrome or Desktop tap <strong>Install App</strong> in the
-          address bar or header so offline cold-starts work reliably.
+          {t('installPwaDesc')}
         </p>
       </div>
     </div>

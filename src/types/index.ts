@@ -10,8 +10,8 @@ export interface Student {
   deviceUid: string;
   publicKeyJwk: JsonWebKey;
   keyFingerprint: string;
-  selfieThumb: string;
-  selfieHash: string;
+  selfiePath: string; // Firebase Storage path: selfies/{sid}/{fp}.webp
+  selfieHash: string; // hex SHA-256 of WebP bytes
   registrationTimestamp: number;
   authorizedTeacherUids: string[];
   rotatedKeys: RotatedKeyEntry[];
@@ -44,8 +44,8 @@ export interface QrPayload {
   ts: number;
   nce: string;
   fp: string;
+  sh: string; // SHA-256 hex of student's WebP selfie stored in Firebase Storage
   sig: string;
-  img?: string;
   pk?: JsonWebKey;
 }
 
@@ -55,19 +55,26 @@ export interface StudentProfile {
   deviceUid: string;
   publicKeyJwk: JsonWebKey;
   keyFingerprint: string;
-  selfieThumb: string;
+  selfiePath: string;
   selfieHash: string;
+  selfieDataUrl: string; // Local preview cached on student device
+  selfieBytes?: Uint8Array; // Pending upload bytes if created offline
+  selfieUploaded: boolean;
   registrationTimestamp: number;
   isRecovery: boolean;
   firestoreSynced: boolean;
 }
 
+export interface CachedSelfie {
+  cacheKey: string; // `${sid}__${fp}`
+  schoolStudentId: string;
+  keyFingerprint: string;
+  selfieHash: string;
+  dataUrl: string;
+  updatedAt: number;
+}
+
 export interface ServerOffsetRecord {
   serverOffset: number; // serverMs - deviceMs
   offsetSyncedAt: number; // deviceMs
-}
-
-export interface CachedClassRoster {
-  classDoc: ClassDoc;
-  updatedAt: number;
 }

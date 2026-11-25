@@ -1,24 +1,15 @@
 import QRCode from 'qrcode';
-import { CONFIG } from '../config';
-import {
-  buildCanonicalSignString,
-  generateNonce,
-  sha256Hex,
-  signCanonicalString,
-} from '../crypto';
+import { buildCanonicalSignString, generateNonce, signCanonicalString } from '../crypto';
 import { getEstimatedServerNowSec } from '../time';
 import type { QrPayload, StudentProfile } from '../../types';
 
 export async function createSignedQrPayload(params: {
   profile: StudentProfile;
   privateKey: CryptoKey;
-  includeSelfie?: boolean;
 }): Promise<{ payload: QrPayload; serialized: string }> {
-  const includeSelfie = params.includeSelfie ?? CONFIG.INCLUDE_SELFIE_IN_QR;
   const ts = await getEstimatedServerNowSec();
   const nce = generateNonce();
-  const img = includeSelfie || params.profile.isRecovery ? params.profile.selfieThumb : undefined;
-  const imgHash = await sha256Hex(img ?? '');
+  const sh = params.profile.selfieHash;
 
   const canonical = buildCanonicalSignString({
     sid: params.profile.schoolStudentId,
@@ -26,7 +17,7 @@ export async function createSignedQrPayload(params: {
     ts,
     nce,
     fp: params.profile.keyFingerprint,
-    imgHash,
+    imgHash: sh,
   });
 
   const sig = await signCanonicalString(params.privateKey, canonical);
@@ -38,8 +29,8 @@ export async function createSignedQrPayload(params: {
     ts,
     nce,
     fp: params.profile.keyFingerprint,
+    sh,
     sig,
-    ...(img !== undefined ? { img } : {}),
     ...(params.profile.isRecovery ? { pk: params.profile.publicKeyJwk } : {}),
   };
 
@@ -56,7 +47,7 @@ export async function renderQrToCanvas(
   await QRCode.toCanvas(canvas, text, {
     errorCorrectionLevel: 'M',
     margin: 2,
-    width: 320,
+    width: 300,
     color: {
       dark: '#0f172a',
       light: '#ffffff',

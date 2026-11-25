@@ -9,11 +9,15 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator, type Functions } from 'firebase/functions';
+import { getStorage, connectStorageEmulator, type FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'demo-api-key',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'demo-project.firebaseapp.com',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'demo-class-attendance',
+  storageBucket:
+    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ||
+    'demo-class-attendance.firebasestorage.app',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '000000000000',
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:000000000000:web:demo',
 };
@@ -28,6 +32,7 @@ let appInstance: FirebaseApp;
 let firestoreInstance: Firestore;
 let authInstance: Auth;
 let functionsInstance: Functions;
+let storageInstance: FirebaseStorage;
 
 if (getApps().length === 0) {
   appInstance = initializeApp(firebaseConfig);
@@ -38,6 +43,7 @@ if (getApps().length === 0) {
   });
   authInstance = getAuth(appInstance);
   functionsInstance = getFunctions(appInstance, 'southamerica-east1');
+  storageInstance = getStorage(appInstance);
 
   if (import.meta.env.VITE_USE_EMULATORS === 'true') {
     connectAuthEmulator(authInstance, 'http://127.0.0.1:9099', {
@@ -45,15 +51,18 @@ if (getApps().length === 0) {
     });
     connectFirestoreEmulator(firestoreInstance, '127.0.0.1', 8080);
     connectFunctionsEmulator(functionsInstance, '127.0.0.1', 5001);
+    connectStorageEmulator(storageInstance, '127.0.0.1', 9199);
   }
 } else {
   appInstance = getApps()[0];
   firestoreInstance = getFirestore(appInstance);
   authInstance = getAuth(appInstance);
   functionsInstance = getFunctions(appInstance, 'southamerica-east1');
+  storageInstance = getStorage(appInstance);
 }
 
 export const firebaseApp = appInstance;
 export const db = firestoreInstance;
 export const auth = authInstance;
 export const functions = functionsInstance;
+export const storage = storageInstance;

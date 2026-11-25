@@ -8,6 +8,7 @@ import {
   qrPayloadSchema,
   verifyQrSignature,
 } from './crypto';
+import { downloadAndVerifySelfieFromStorage } from './storageHelper';
 
 const requestSchema = z.object({
   qrPayload: qrPayloadSchema,
@@ -41,7 +42,7 @@ export const registerFirstScan = onCall(async (request) => {
   const classRef = db.collection('classes').doc(classId);
   const studentRef = db.collection('students').doc(qrPayload.sid);
 
-  const result = await db.runTransaction(async (tx) => {
+  const txResult = await db.runTransaction(async (tx) => {
     const [classSnap, studentSnap] = await Promise.all([
       tx.get(classRef),
       tx.get(studentRef),
@@ -53,10 +54,7 @@ export const registerFirstScan = onCall(async (request) => {
 
     const classData = classSnap.data()!;
     if (classData.teacherUid !== teacherUid) {
-      throw new HttpsError(
-        'permission-denied',
-        'You do not own this class.'
-      );
+      throw new HttpsError('permission-denied', 'You do not own this class.');
     }
 
     if (!studentSnap.exists) {
@@ -68,9 +66,6 @@ export const registerFirstScan = onCall(async (request) => {
 
     const student = studentSnap.data()!;
 
-    // If the student's stored key fingerprint differs from QR (e.g., student lost
-    // original device and recovered before this teacher ever scanned them),
-    // return ROTATION_REQUIRED so the teacher sees the rotation approval modal.
     if (qrPayload.fp !== student.keyFingerprint) {
       return {
         status: 'ROTATION_REQUIRED' as const,
@@ -109,5 +104,34 @@ export const registerFirstScan = onCall(async (request) => {
     };
   });
 
-  return result;
+  if (txResult.status === 'ROTATION_REQUIRED') {
+    let rotationSelfieDataUrl: string | undefined;
+    if (qrPayload.pk) {
+      if (computeFingerprintFromJwk(qrPayload.pk) !== qrPayload.fp) {
+        throw new HttpsError(
+          'permission-denied',
+          'New public key does not match QR fingerprint.'
+        );
+      }
+      if (!verifyQrSignature(qrPayload.pk, qrPayload)) {
+        throw new HttpsError(
+          'permission-denied',
+          'Invalid signature against the new public key.'
+        );
+      }
+      const verified = await downloadAndVerifySelfieFromStorage(
+        qrPayload.sid,
+        qrPayload.fp,
+        qrPayload.sh
+      );
+      rotationSelfieDataUrl = verified.dataUrl;
+    }
+
+    return {
+      ...txResult,
+      rotationSelfieDataUrl,
+    };
+  }
+
+  return txResult;
 });

@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type {
   Attendance,
+  CachedSelfie,
   ClassDoc,
   ServerOffsetRecord,
   Student,
@@ -15,6 +16,10 @@ interface AttendanceDBSchema extends DBSchema {
   'cache:students': {
     key: string;
     value: Student;
+  };
+  'cache:selfies': {
+    key: string;
+    value: CachedSelfie;
   };
   'cache:classes': {
     key: string;
@@ -31,7 +36,7 @@ interface AttendanceDBSchema extends DBSchema {
 }
 
 const DB_NAME = 'class-attendance-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export const KV_KEYS = {
   STUDENT_PROFILE: 'student-profile',
@@ -50,6 +55,9 @@ export function getDb(): Promise<IDBPDatabase<AttendanceDBSchema>> {
         }
         if (!db.objectStoreNames.contains('cache:students')) {
           db.createObjectStore('cache:students', { keyPath: 'schoolStudentId' });
+        }
+        if (!db.objectStoreNames.contains('cache:selfies')) {
+          db.createObjectStore('cache:selfies', { keyPath: 'cacheKey' });
         }
         if (!db.objectStoreNames.contains('cache:classes')) {
           db.createObjectStore('cache:classes', { keyPath: 'classId' });
@@ -84,7 +92,7 @@ export async function getStudentPrivateKey(): Promise<CryptoKey | undefined> {
 
 /**
  * Stores the non-extractable student private key on initial registration.
- * Refuses to overwrite an existing key (§5.1 immutability enforcement).
+ * Refuses to overwrite an existing key.
  */
 export async function saveStudentPrivateKeyInitial(privateKey: CryptoKey): Promise<void> {
   const db = await getDb();
@@ -101,7 +109,7 @@ export async function saveStudentPrivateKeyInitial(privateKey: CryptoKey): Promi
 }
 
 /**
- * Replaces the student private key explicitly during the recovery flow (§6.3).
+ * Replaces the student private key explicitly during the recovery flow.
  */
 export async function replaceStudentPrivateKeyForRecovery(
   privateKey: CryptoKey
@@ -120,7 +128,7 @@ export async function saveServerOffset(record: ServerOffsetRecord): Promise<void
   await db.put('kv', record, KV_KEYS.SERVER_OFFSET);
 }
 
-// Teacher caches (§9)
+// Teacher caches
 export async function getCachedStudent(
   schoolStudentId: string
 ): Promise<Student | undefined> {
@@ -136,6 +144,23 @@ export async function putCachedStudent(student: Student): Promise<void> {
 export async function getAllCachedStudents(): Promise<Student[]> {
   const db = await getDb();
   return db.getAll('cache:students');
+}
+
+export function selfieCacheKey(sid: string, fp: string): string {
+  return `${sid}__${fp}`;
+}
+
+export async function getCachedSelfie(
+  sid: string,
+  fp: string
+): Promise<CachedSelfie | undefined> {
+  const db = await getDb();
+  return db.get('cache:selfies', selfieCacheKey(sid, fp));
+}
+
+export async function putCachedSelfie(selfie: CachedSelfie): Promise<void> {
+  const db = await getDb();
+  await db.put('cache:selfies', selfie);
 }
 
 export async function getCachedClass(classId: string): Promise<ClassDoc | undefined> {

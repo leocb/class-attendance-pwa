@@ -17,11 +17,13 @@ import {
   generateExportFilename,
   type ExportClassBundle,
 } from '../../../lib/excel/exportAttendance';
+import { useI18n } from '../../../lib/i18n';
 import { getLocalSessionDate } from '../../../lib/time';
 import type { Attendance, ClassDoc, Student } from '../../../types';
 
 export function TeacherExportPage() {
   const { user, isOnline } = useApp();
+  const { t } = useI18n();
   const [classes, setClasses] = useState<ClassDoc[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [allTime, setAllTime] = useState(true);
@@ -83,7 +85,7 @@ export function TeacherExportPage() {
 
     const chosenClasses = classes.filter((c) => selectedIds.has(c.classId));
     if (chosenClasses.length === 0) {
-      setError('Select at least one class to export.');
+      setError(t('selectOneClassError'));
       return;
     }
 
@@ -114,7 +116,6 @@ export function TeacherExportPage() {
               attendance = await getCachedAttendanceByClass(cls.classId);
             }
           } else {
-            // Works 100% offline from IndexedDB (§10)
             attendance = await getCachedAttendanceByClass(cls.classId);
           }
 
@@ -137,10 +138,23 @@ export function TeacherExportPage() {
         fromDate: from,
         toDate: to,
         includeSummary,
+        labels: {
+          studentId: t('colStudentId'),
+          name: t('colName'),
+          presencePct: t('colPresencePct'),
+          summarySheet: t('sheetSummary'),
+          classCol: t('colClass'),
+          scannedCol: t('colScanned'),
+          totalSessionsCol: t('colTotalSessions'),
+        },
       });
       const filename = await generateExportFilename(from, to);
       await downloadWorkbookXlsx(workbook, filename);
-      setSuccess(`Exported ${filename} (${chosenClasses.length} class sheet${chosenClasses.length > 1 ? 's' : ''}).`);
+      setSuccess(
+        chosenClasses.length === 1
+          ? t('exportSuccessOne', { filename })
+          : t('exportSuccess', { filename, count: chosenClasses.length })
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Excel export failed.');
     } finally {
@@ -153,15 +167,12 @@ export function TeacherExportPage() {
       <div className="row">
         <Link to="/teacher/classes" className="btn btn-sm">
           <ArrowLeft size={15} />
-          Classes
+          {t('classes')}
         </Link>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.35rem' }}>
-            Export Attendance (XLSX)
-          </h1>
+          <h1 style={{ margin: 0, fontSize: '1.35rem' }}>{t('exportTitle')}</h1>
           <p className="muted" style={{ margin: 0, fontSize: '0.88rem' }}>
-            Generated completely in-browser from local IndexedDB cache. Works
-            offline.
+            {t('exportSubtitle')}
           </p>
         </div>
       </div>
@@ -172,12 +183,12 @@ export function TeacherExportPage() {
       <div className="card stack-md">
         <div className="row">
           <FileSpreadsheet size={20} />
-          <strong>Select Classes</strong>
+          <strong>{t('selectClasses')}</strong>
         </div>
 
         {classes.length === 0 ? (
           <p className="muted" style={{ margin: 0 }}>
-            No cached classes available yet.
+            {t('noCachedClasses')}
           </p>
         ) : (
           <div className="stack-sm">
@@ -199,28 +210,35 @@ export function TeacherExportPage() {
                 />
                 <span style={{ fontWeight: 600 }}>{cls.name}</span>
                 <span className="muted" style={{ fontSize: '0.85rem' }}>
-                  ({cls.studentIds.length} students)
+                  ({cls.studentIds.length}{' '}
+                  {cls.studentIds.length === 1
+                    ? t('studentSingular')
+                    : t('studentPlural')}
+                  )
                 </span>
               </label>
             ))}
           </div>
         )}
 
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }} className="stack-sm">
+        <div
+          style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }}
+          className="stack-sm"
+        >
           <label className="row" style={{ cursor: 'pointer' }}>
             <input
               type="checkbox"
               checked={allTime}
               onChange={(e) => setAllTime(e.target.checked)}
             />
-            <strong>All time</strong>
+            <strong>{t('allTime')}</strong>
           </label>
 
           {!allTime && (
             <div className="grid-2">
               <div>
                 <label className="label" htmlFor="export-from">
-                  From Date
+                  {t('fromDate')}
                 </label>
                 <input
                   id="export-from"
@@ -232,7 +250,7 @@ export function TeacherExportPage() {
               </div>
               <div>
                 <label className="label" htmlFor="export-to">
-                  To Date
+                  {t('toDate')}
                 </label>
                 <input
                   id="export-to"
@@ -251,7 +269,7 @@ export function TeacherExportPage() {
               checked={includeSummary}
               onChange={(e) => setIncludeSummary(e.target.checked)}
             />
-            <span>Include &ldquo;Summary&rdquo; sheet across selected classes</span>
+            <span>{t('includeSummary')}</span>
           </label>
         </div>
 
@@ -262,7 +280,7 @@ export function TeacherExportPage() {
           onClick={handleExport}
         >
           <Download size={16} />
-          {exporting ? 'Building XLSX…' : 'Download Attendance XLSX'}
+          {exporting ? t('buildingXlsx') : t('downloadXlsx')}
         </button>
       </div>
     </div>

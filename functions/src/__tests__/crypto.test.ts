@@ -27,7 +27,7 @@ describe('Cloud Functions ECDSA P-256 interoperability with WebCrypto', () => {
     const fp = computeFingerprintFromJwk(jwk);
     expect(fp).toMatch(/^[A-Z2-7]{8}$/);
 
-    const img = 'UklGRh4AAABXRUJQ';
+    const sh = sha256Hex(new Uint8Array([1, 2, 3, 4]));
     const ts = Math.floor(Date.now() / 1000);
     const nce = 'a1b2c3d4';
     const canonical = buildCanonicalSignString({
@@ -36,11 +36,9 @@ describe('Cloud Functions ECDSA P-256 interoperability with WebCrypto', () => {
       ts,
       nce,
       fp,
-      img,
+      sh,
     });
-    expect(canonical).toBe(
-      `v1|A12345678|Jane Doe|${ts}|${nce}|${fp}|${sha256Hex(img)}`
-    );
+    expect(canonical).toBe(`v1|A12345678|Jane Doe|${ts}|${nce}|${fp}|${sh}`);
 
     const rawSig = await subtle.sign(
       { name: 'ECDSA', hash: 'SHA-256' },
@@ -56,8 +54,8 @@ describe('Cloud Functions ECDSA P-256 interoperability with WebCrypto', () => {
       ts,
       nce,
       fp,
+      sh,
       sig,
-      img,
     });
 
     expect(verifyQrSignature(jwk, parsed)).toBe(true);

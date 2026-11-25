@@ -1,9 +1,13 @@
 import { CONFIG } from '../config';
+import { sha256Hex } from '../crypto';
 
 export interface EncodedSelfie {
-  base64: string;
-  mimeType: 'image/webp' | 'image/jxl';
+  bytes: Uint8Array;
+  blob: Blob;
+  dataUrl: string;
+  mimeType: 'image/webp';
   byteLength: number;
+  sha256Hex: string;
 }
 
 function drawCenterCroppedSquare(
@@ -27,63 +31,67 @@ function drawCenterCroppedSquare(
   return canvas;
 }
 
-function dataUrlToBase64(dataUrl: string): string {
-  const idx = dataUrl.indexOf(',');
-  return idx >= 0 ? dataUrl.slice(idx + 1) : dataUrl;
+function canvasToWebpBlob(
+  canvas: HTMLCanvasElement,
+  quality: number
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error('Failed to encode WebP selfie'));
+        }
+      },
+      'image/webp',
+      quality
+    );
+  });
+}
+
+export function bytesToWebpDataUrl(bytes: Uint8Array): string {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return `data:image/webp;base64,${btoa(binary)}`;
 }
 
 async function encodeCanvasWebP(canvas: HTMLCanvasElement): Promise<EncodedSelfie> {
-  let quality: number = CONFIG.SELFIE_WEBP_QUALITY;
-  let dataUrl = canvas.toDataURL('image/webp', quality);
+  const qualitySteps = [CONFIG.SELFIE_WEBP_QUALITY, 0.72, 0.6, 0.45, 0.3];
+  let blob = await canvasToWebpBlob(canvas, qualitySteps[0]);
 
-  // Fallback check if browser returned PNG instead of WebP
-  if (!dataUrl.startsWith('data:image/webp')) {
-    dataUrl = canvas.toDataURL('image/jpeg', 0.45);
+  for (let i = 1; i < qualitySteps.length && blob.size > CONFIG.SELFIE_MAX_BYTES; i++) {
+    blob = await canvasToWebpBlob(canvas, qualitySteps[i]);
   }
 
-  let base64 = dataUrlToBase64(dataUrl);
-  // Keep thumbnail under 900 bytes where possible (§4)
-  while (base64.length > 1200 && quality > 0.15) {
-    quality = Math.max(0.15, quality - 0.08);
-    dataUrl = canvas.toDataURL('image/webp', quality);
-    base64 = dataUrlToBase64(dataUrl);
+  if (blob.size > CONFIG.SELFIE_MAX_BYTES) {
+    throw new Error('Selfie exceeds 1 MB maximum limit even after compression.');
   }
 
-  const byteLength = Math.floor((base64.length * 3) / 4);
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const hash = await sha256Hex(bytes);
+
   return {
-    base64,
+    bytes,
+    blob,
+    dataUrl: bytesToWebpDataUrl(bytes),
     mimeType: 'image/webp',
-    byteLength,
+    byteLength: bytes.byteLength,
+    sha256Hex: hash,
   };
-}
-
-async function encodeCanvas(canvas: HTMLCanvasElement): Promise<EncodedSelfie> {
-  if (CONFIG.USE_JXL) {
-    // Experimental JXL path behind USE_JXL flag (§5.4); falls back cleanly to WebP.
-    try {
-      const jxlUrl = canvas.toDataURL('image/jxl', 0.4);
-      if (jxlUrl.startsWith('data:image/jxl')) {
-        const base64 = dataUrlToBase64(jxlUrl);
-        return {
-          base64,
-          mimeType: 'image/jxl',
-          byteLength: Math.floor((base64.length * 3) / 4),
-        };
-      }
-    } catch {
-      // Fallback to WebP
-    }
-  }
-  return encodeCanvasWebP(canvas);
 }
 
 export async function captureSelfieFromVideo(
   video: HTMLVideoElement
 ): Promise<EncodedSelfie> {
-  const width = video.videoWidth || 320;
-  const height = video.videoHeight || 320;
+  const width = video.videoWidth || CONFIG.SELFIE_SIZE_PX;
+  const height = video.videoHeight || CONFIG.SELFIE_SIZE_PX;
   const canvas = drawCenterCroppedSquare(video, width, height, CONFIG.SELFIE_SIZE_PX);
-  return encodeCanvas(canvas);
+  return encodeCanvasWebP(canvas);
 }
 
 export async function encodeSelfieFromFile(file: File | Blob): Promise<EncodedSelfie> {
@@ -101,14 +109,8 @@ export async function encodeSelfieFromFile(file: File | Blob): Promise<EncodedSe
       img.naturalHeight,
       CONFIG.SELFIE_SIZE_PX
     );
-    return encodeCanvas(canvas);
+    return encodeCanvasWebP(canvas);
   } finally {
     URL.revokeObjectURL(url);
   }
-}
-
-export function selfieDataUrl(base64: string): string {
-  if (!base64) return '';
-  if (base64.startsWith('data:')) return base64;
-  return `data:image/webp;base64,${base64}`;
 }

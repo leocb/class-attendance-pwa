@@ -1,26 +1,22 @@
 export const CONFIG = {
-  /** Include base64 selfie thumbnail inside QR payload (§5.4). */
-  INCLUDE_SELFIE_IN_QR:
-    import.meta.env.VITE_INCLUDE_SELFIE_IN_QR !== 'false',
-
-  /** Optional experimental JPEG XL encoding behind flag (§5.4). Default: false (WebP). */
-  USE_JXL: import.meta.env.VITE_USE_JXL === 'true',
-
-  /** QR rotation interval in milliseconds (§5.2). */
+  /** QR rotation interval in milliseconds. */
   QR_REFRESH_MS: 30_000,
 
-  /** Maximum allowed clock/screenshot age in seconds (§5.3). */
+  /** Maximum allowed clock/screenshot age in seconds. */
   QR_MAX_AGE_SECONDS: 180,
 
-  /** Time offset refresh interval while online (§6.4). */
+  /** Time offset refresh interval while online. */
   TIME_SYNC_INTERVAL_MS: 10 * 60 * 1000,
 
-  /** Selfie square size in pixels (§5.4). */
-  SELFIE_SIZE_PX: 96,
+  /** Selfie square size in pixels (512x512 WebP HD). */
+  SELFIE_SIZE_PX: 512,
 
-  /** WebP encoding quality (§5.4). */
-  SELFIE_WEBP_QUALITY: 0.4,
+  /** Initial WebP encoding quality for crisp facial verification. */
+  SELFIE_WEBP_QUALITY: 0.82,
 
-  /** Base URL for Cloud Functions HTTP endpoints (empty = same origin / Hosting rewrite). */
+  /** Maximum allowed selfie file size in bytes (1 MB). */
+  SELFIE_MAX_BYTES: 1024 * 1024,
+
+  /** Base URL for Cloud Functions HTTP endpoints (empty = same origin / Worker proxy). */
   FUNCTIONS_BASE_URL: (import.meta.env.VITE_FUNCTIONS_BASE_URL ?? '').replace(/\/$/, ''),
 } as const;

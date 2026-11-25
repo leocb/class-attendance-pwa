@@ -21,8 +21,8 @@ export const qrPayloadSchema = z.object({
   ts: z.number().int().positive(),
   nce: z.string().min(4).max(64),
   fp: z.string().length(8),
+  sh: z.string().regex(/^[0-9a-f]{64}$/),
   sig: z.string().min(16).max(256),
-  img: z.string().max(4096).optional(),
   pk: ecPublicJwkSchema.optional(),
 });
 
@@ -68,10 +68,9 @@ export function buildCanonicalSignString(qr: {
   ts: number;
   nce: string;
   fp: string;
-  img?: string;
+  sh: string;
 }): string {
-  const imgHash = sha256Hex(qr.img ?? '');
-  return `v1|${qr.sid}|${qr.n}|${qr.ts}|${qr.nce}|${qr.fp}|${imgHash}`;
+  return `v1|${qr.sid}|${qr.n}|${qr.ts}|${qr.nce}|${qr.fp}|${qr.sh}`;
 }
 
 export function verifyQrSignature(

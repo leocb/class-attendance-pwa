@@ -7,11 +7,22 @@ export interface ExportClassBundle {
   attendance: Attendance[];
 }
 
+export interface ExportLabels {
+  studentId?: string;
+  name?: string;
+  presencePct?: string;
+  summarySheet?: string;
+  classCol?: string;
+  scannedCol?: string;
+  totalSessionsCol?: string;
+}
+
 export interface ExportOptions {
   bundles: ExportClassBundle[];
-  fromDate: string | null; // YYYY-MM-DD or null for all time
-  toDate: string | null;   // YYYY-MM-DD or null for all time
+  fromDate: string | null;
+  toDate: string | null;
   includeSummary: boolean;
+  labels?: ExportLabels;
 }
 
 export function sanitizeSheetName(raw: string, usedNames: Set<string>): string {
@@ -39,17 +50,25 @@ function inDateRange(
 export async function buildAttendanceWorkbook(
   options: ExportOptions
 ): Promise<ExcelJS.Workbook> {
+  const labels = {
+    studentId: options.labels?.studentId ?? 'Student ID',
+    name: options.labels?.name ?? 'Name',
+    presencePct: options.labels?.presencePct ?? 'Presence %',
+    summarySheet: options.labels?.summarySheet ?? 'Summary',
+    classCol: options.labels?.classCol ?? 'Class',
+    scannedCol: options.labels?.scannedCol ?? 'Scanned',
+    totalSessionsCol: options.labels?.totalSessionsCol ?? 'Total Sessions',
+  };
+
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'ClassAttend PWA';
+  workbook.creator = 'Class Attendance';
   workbook.created = new Date();
 
   const usedSheetNames = new Set<string>();
   if (options.includeSummary) {
-    usedSheetNames.add('Summary');
+    usedSheetNames.add(labels.summarySheet);
   }
 
-  // Collect union of all session dates in range across selected classes
-  // so dates without a session for a specific class render '—' (§10).
   const allDatesSet = new Set<string>();
   const filteredByClass = options.bundles.map((bundle) => {
     const records = bundle.attendance.filter((rec) =>
@@ -88,14 +107,18 @@ export async function buildAttendanceWorkbook(
       views: [{ state: 'frozen', ySplit: 1 }],
     });
 
-    const headers = ['Student ID', 'Name', ...sortedAllDates, 'Presence %'];
+    const headers = [
+      labels.studentId,
+      labels.name,
+      ...sortedAllDates,
+      labels.presencePct,
+    ];
     const headerRow = sheet.addRow(headers);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
     const totalClassSessions = item.classSessionDates.size;
 
-    // Include any students present in attendance even if roster cache missed them
     const studentById = new Map<string, Student>();
     for (const st of item.students) {
       studentById.set(st.schoolStudentId, st);
@@ -108,7 +131,7 @@ export async function buildAttendanceWorkbook(
           deviceUid: '',
           publicKeyJwk: { kty: 'EC', crv: 'P-256' },
           keyFingerprint: '',
-          selfieThumb: '',
+          selfiePath: '',
           selfieHash: '',
           registrationTimestamp: 0,
           authorizedTeacherUids: [],
@@ -175,16 +198,16 @@ export async function buildAttendanceWorkbook(
   }
 
   if (options.includeSummary) {
-    const summarySheet = workbook.addWorksheet('Summary', {
+    const summarySheet = workbook.addWorksheet(labels.summarySheet, {
       views: [{ state: 'frozen', ySplit: 1 }],
     });
     const summaryHeaders = [
-      'Class',
-      'Student ID',
-      'Name',
-      'Scanned',
-      'Total Sessions',
-      'Presence %',
+      labels.classCol,
+      labels.studentId,
+      labels.name,
+      labels.scannedCol,
+      labels.totalSessionsCol,
+      labels.presencePct,
     ];
     const headerRow = summarySheet.addRow(summaryHeaders);
     headerRow.font = { bold: true };

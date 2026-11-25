@@ -1,20 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { KeyRound, RefreshCw } from 'lucide-react';
+import { KeyRound, RefreshCw, UploadCloud } from 'lucide-react';
 import { CONFIG } from '../../../lib/config';
-import { getStudentPrivateKey, getStudentProfile } from '../../../lib/idb';
+import {
+  getStudentPrivateKey,
+  getStudentProfile,
+  saveStudentProfile,
+} from '../../../lib/idb';
+import { ensureStudentAnonymousAuth } from '../../../lib/firebase/auth';
+import { uploadStudentSelfie } from '../../../lib/firebase/storage';
 import { createSignedQrPayload, renderQrToCanvas } from '../../../lib/qr';
-import { selfieDataUrl } from '../../../lib/image/selfie';
+import { useI18n } from '../../../lib/i18n';
+import { useApp } from '../../../app/AppProvider';
 import type { StudentProfile } from '../../../types';
 
 export function StudentQrPage() {
   const navigate = useNavigate();
+  const { isOnline } = useApp();
+  const { t } = useI18n();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [privateKey, setPrivateKey] = useState<CryptoKey | null>(null);
   const [remainingMs, setRemainingMs] = useState<number>(CONFIG.QR_REFRESH_MS);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number>(Date.now());
   const [payloadSize, setPayloadSize] = useState<number>(0);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,6 +47,40 @@ export function StudentQrPage() {
     };
   }, [navigate]);
 
+  const syncPendingPhoto = useCallback(async () => {
+    if (!profile || profile.selfieUploaded || !profile.selfieBytes || !navigator.onLine) {
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const user = await ensureStudentAnonymousAuth();
+      await uploadStudentSelfie({
+        sid: profile.schoolStudentId,
+        fp: profile.keyFingerprint,
+        deviceUid: user.uid,
+        bytes: profile.selfieBytes,
+      });
+      const updated: StudentProfile = {
+        ...profile,
+        deviceUid: user.uid,
+        selfieUploaded: true,
+        selfieBytes: undefined,
+      };
+      await saveStudentProfile(updated);
+      setProfile(updated);
+    } catch {
+      // Keep pending until network/auth succeeds
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    if (isOnline && profile && !profile.selfieUploaded) {
+      void syncPendingPhoto();
+    }
+  }, [isOnline, profile, syncPendingPhoto]);
+
   const regenerateQr = useCallback(async () => {
     if (!profile || !privateKey || !canvasRef.current) return;
     try {
@@ -54,7 +98,6 @@ export function StudentQrPage() {
     }
   }, [profile, privateKey]);
 
-  // 30-second rotating QR interval (§6.2)
   useEffect(() => {
     if (!profile || !privateKey) return;
     void regenerateQr();
@@ -64,7 +107,6 @@ export function StudentQrPage() {
     return () => window.clearInterval(interval);
   }, [profile, privateKey, regenerateQr]);
 
-  // Progress countdown ticker
   useEffect(() => {
     const tick = window.setInterval(() => {
       const elapsed = Date.now() - lastUpdatedAt;
@@ -73,7 +115,6 @@ export function StudentQrPage() {
     return () => window.clearInterval(tick);
   }, [lastUpdatedAt]);
 
-  // Screen WakeLock while displaying QR (§6.2)
   useEffect(() => {
     let wakeLock: WakeLockSentinel | null = null;
     const requestLock = async () => {
@@ -82,7 +123,7 @@ export function StudentQrPage() {
           wakeLock = await navigator.wakeLock.request('screen');
         }
       } catch {
-        // WakeLock optional on unsupported browsers
+        // WakeLock optional
       }
     };
     void requestLock();
@@ -101,7 +142,7 @@ export function StudentQrPage() {
   if (!profile) {
     return (
       <div className="card">
-        <p className="muted">Loading student credentials…</p>
+        <p className="muted">{t('loadingStudentCreds')}</p>
       </div>
     );
   }
@@ -116,8 +157,27 @@ export function StudentQrPage() {
     <div className="card qr-fullscreen">
       {profile.isRecovery && (
         <div className="alert alert-warning" style={{ width: '100%', textAlign: 'left' }}>
-          <strong>Recovery QR Active:</strong> Show this QR to your teacher so
-          they can approve your new key during the scan.
+          {t('recoveryQrBanner')}
+        </div>
+      )}
+
+      {!profile.selfieUploaded && (
+        <div
+          className="alert alert-warning row-between"
+          style={{ width: '100%', textAlign: 'left' }}
+        >
+          <span>{t('pendingUploadBanner')}</span>
+          {isOnline && (
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={() => void syncPendingPhoto()}
+              disabled={uploadingPhoto}
+            >
+              <UploadCloud size={14} />
+              {t('uploadNow')}
+            </button>
+          )}
         </div>
       )}
 
@@ -169,18 +229,20 @@ export function StudentQrPage() {
                 display: 'inline-block',
               }}
             />
-            <strong>Live</strong>
-            <span className="muted">· refreshes in {secondsLeft}s</span>
+            <strong>{t('live')}</strong>
+            <span className="muted">
+              · {t('refreshesIn')} {secondsLeft}s
+            </span>
           </div>
           <div className="muted" style={{ fontSize: '0.78rem' }}>
-            {payloadSize} bytes signed ECDSA P-256
+            {payloadSize} {t('signedEcdsa')}
           </div>
         </div>
       </div>
 
       <div className="row" style={{ justifyContent: 'center' }}>
         <img
-          src={selfieDataUrl(profile.selfieThumb)}
+          src={profile.selfieDataUrl}
           alt={profile.name}
           className="avatar"
         />
@@ -190,7 +252,7 @@ export function StudentQrPage() {
             ID: {profile.schoolStudentId}
           </div>
           <div className="mono muted" style={{ fontSize: '0.78rem' }}>
-            Key FP: {profile.keyFingerprint}
+            {t('keyFp')}: {profile.keyFingerprint}
           </div>
         </div>
       </div>
@@ -198,11 +260,11 @@ export function StudentQrPage() {
       <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
         <button type="button" className="btn btn-sm" onClick={() => void regenerateQr()}>
           <RefreshCw size={14} />
-          Refresh Now
+          {t('refreshNow')}
         </button>
         <Link to="/student/recover" className="btn btn-sm">
           <KeyRound size={14} />
-          Key Recovery
+          {t('keyRecovery')}
         </Link>
       </div>
     </div>

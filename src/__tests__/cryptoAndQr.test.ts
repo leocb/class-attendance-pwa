@@ -14,7 +14,7 @@ import {
 import { parseQrPayload } from '../lib/validation/qrSchema';
 import { isTimestampFresh } from '../lib/time';
 
-describe('Student ECDSA P-256 Cryptography & QR Payload', () => {
+describe('Student ECDSA P-256 Cryptography & Compact QR Payload', () => {
   it('generates a non-extractable private key and deterministic 8-char Base32 fingerprint', async () => {
     const keyPair = await generateStudentKeyPair();
     expect(keyPair.privateKey.extractable).toBe(false);
@@ -32,12 +32,11 @@ describe('Student ECDSA P-256 Cryptography & QR Payload', () => {
     expect(fpFromJwk).toBe(fpFromSpki);
   });
 
-  it('signs canonical string and detects tampering on any field including selfie img', async () => {
+  it('signs canonical string with selfieHash (sh) and keeps QR payload compact', async () => {
     const keyPair = await generateStudentKeyPair();
     const jwk = await exportPublicKeyJwk(keyPair.publicKey);
     const fp = await computeFingerprintFromJwk(jwk);
-    const img = 'UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=';
-    const imgHash = await sha256Hex(img);
+    const sh = await sha256Hex(new Uint8Array([1, 2, 3, 4]));
     const ts = 1712345678;
     const nce = generateNonce();
 
@@ -47,7 +46,7 @@ describe('Student ECDSA P-256 Cryptography & QR Payload', () => {
       ts,
       nce,
       fp,
-      imgHash,
+      imgHash: sh,
     });
     const sig = await signCanonicalString(keyPair.privateKey, canonical);
 
@@ -60,12 +59,13 @@ describe('Student ECDSA P-256 Cryptography & QR Payload', () => {
       ts,
       nce,
       fp,
+      sh,
       sig,
-      img,
     });
+    expect(payloadJson.length).toBeLessThan(350);
     expect(parseQrPayload(payloadJson)).not.toBeNull();
 
-    // Swapping selfie image invalidates signature
+    // Swapping selfieHash invalidates signature
     const tamperedCanonical = buildCanonicalSignString({
       sid: 'A12345678',
       n: 'Jane Doe',

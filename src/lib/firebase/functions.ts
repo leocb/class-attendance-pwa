@@ -5,11 +5,17 @@ import type { QrPayload, Student } from '../../types';
 export interface RegisterFirstScanResponse {
   status: 'REGISTERED' | 'ROTATION_REQUIRED';
   student: Student;
+  rotationSelfieDataUrl?: string;
 }
 
 export interface ApproveRotationResponse {
   status: 'ROTATED';
   student: Student;
+  selfieDataUrl: string;
+}
+
+export interface GetRotationSelfieResponse {
+  selfieDataUrl: string;
 }
 
 const registerFirstScanCallable = httpsCallable<
@@ -21,6 +27,11 @@ const approveRotationCallable = httpsCallable<
   { qrPayload: QrPayload; classId: string },
   ApproveRotationResponse
 >(functions, 'approveRotation');
+
+const getRotationSelfieCallable = httpsCallable<
+  { qrPayload: QrPayload; classId: string },
+  GetRotationSelfieResponse
+>(functions, 'getRotationSelfie');
 
 export async function callRegisterFirstScan(
   qrPayload: QrPayload,
@@ -35,5 +46,13 @@ export async function callApproveRotation(
   classId: string
 ): Promise<ApproveRotationResponse> {
   const result = await approveRotationCallable({ qrPayload, classId });
+  return result.data;
+}
+
+export async function callGetRotationSelfie(
+  qrPayload: QrPayload,
+  classId: string
+): Promise<GetRotationSelfieResponse> {
+  const result = await getRotationSelfieCallable({ qrPayload, classId });
   return result.data;
 }

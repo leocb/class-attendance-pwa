@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'pwa-192x192.png', 'pwa-512x512.png', 'zxing_reader.wasm'],
       manifest: {
-        name: 'ClassAttend — Classroom Attendance',
-        short_name: 'ClassAttend',
+        name: 'Class Attendance',
+        short_name: 'Class Attendance',
         description: 'Offline-first classroom attendance with rotating signed QR codes and passkey teacher authentication.',
         theme_color: '#0f172a',
         background_color: '#0f172a',
