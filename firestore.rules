@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isTeacher() {
+      return request.auth != null && request.auth.token.teacher == true;
+    }
+
+    match /students/{sid} {
+      // Only teachers who have scanned this student (and are therefore in
+      // authorizedTeacherUids) can read a specific student document.
+      allow get: if isTeacher()
+        && request.auth.uid in resource.data.authorizedTeacherUids;
+
+      // No directory enumeration, ever.
+      allow list: if false;
+
+      // Students create their own document (deviceUid must match).
+      allow create: if request.auth != null
+        && request.resource.data.deviceUid == request.auth.uid
+        && request.resource.data.authorizedTeacherUids.size() == 0
+        && request.resource.data.rotatedKeys.size() == 0;
+
+      // All updates flow through Cloud Functions (admin SDK bypasses rules).
+      // Direct client updates are forbidden — this is how we guarantee that
+      // authorization only happens after signature verification.
+      allow update, delete: if false;
+    }
+
+    match /classes/{cid} {
+      allow get, list: if isTeacher()
+        && resource.data.teacherUid == request.auth.uid;
+      allow create: if isTeacher()
+        && request.resource.data.teacherUid == request.auth.uid
+        && request.resource.data.studentIds.size() == 0;
+      // Updates to studentIds happen only via Cloud Functions.
+      allow update, delete: if false;
+    }
+
+    match /attendance/{aid} {
+      allow read: if isTeacher()
+        && resource.data.teacherUid == request.auth.uid;
+      allow create: if isTeacher()
+        && request.resource.data.teacherUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Internal WebAuthn tables accessed exclusively by Cloud Functions (Admin SDK).
+    match /webauthn_credentials/{credId} {
+      allow read, write: if false;
+    }
+
+    match /webauthn_challenges/{challengeId} {
+      allow read, write: if false;
+    }
+  }
+}
