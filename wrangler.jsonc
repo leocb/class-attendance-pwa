@@ -1,5 +1,7 @@
 {
+  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "class-attendance-pwa",
+  "account_id": "cbccd23973b3b71b305a4e8efc1c4562",
   "main": "worker/index.ts",
   "compatibility_date": "2025-11-01",
   "workers_dev": true,
