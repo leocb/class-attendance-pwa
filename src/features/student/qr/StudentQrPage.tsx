@@ -12,7 +12,7 @@ export function StudentQrPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [privateKey, setPrivateKey] = useState<CryptoKey | null>(null);
-  const [remainingMs, setRemainingMs] = useState(CONFIG.QR_REFRESH_MS);
+  const [remainingMs, setRemainingMs] = useState<number>(CONFIG.QR_REFRESH_MS);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number>(Date.now());
   const [payloadSize, setPayloadSize] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
