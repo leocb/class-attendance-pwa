@@ -39,6 +39,10 @@ import {
 } from '../../../lib/idb';
 import { useI18n } from '../../../lib/i18n';
 import { getLocalSessionDate } from '../../../lib/time';
+import {
+  SelfieZoomModal,
+  type ZoomedSelfie,
+} from '../../../components/SelfieZoomModal';
 import type { Attendance, ClassDoc, QrPayload, Student } from '../../../types';
 import {
   confirmKeyRotationAndRecord,
@@ -88,6 +92,7 @@ export function TeacherScanPage() {
   const [rotationModal, setRotationModal] =
     useState<RotationModalState | null>(null);
   const [rotationBusy, setRotationBusy] = useState(false);
+  const [zoomedSelfie, setZoomedSelfie] = useState<ZoomedSelfie | null>(null);
 
   const today = getLocalSessionDate();
   const seenTodayRef = useRef<Set<string>>(new Set());
@@ -540,11 +545,31 @@ export function TeacherScanPage() {
           }}
         >
           {confirmedCard.selfieDataUrl ? (
-            <img
-              src={confirmedCard.selfieDataUrl}
-              alt={confirmedCard.student.name}
-              className="avatar-lg"
-            />
+            <button
+              type="button"
+              onClick={() =>
+                setZoomedSelfie({
+                  src: confirmedCard.selfieDataUrl!,
+                  alt: confirmedCard.student.name,
+                  caption: `${confirmedCard.student.name} (${confirmedCard.student.schoolStudentId})`,
+                })
+              }
+              title={t('tapToZoom')}
+              aria-label={`${confirmedCard.student.name} — ${t('tapToZoom')}`}
+              style={{
+                padding: 0,
+                border: 'none',
+                background: 'transparent',
+                cursor: 'zoom-in',
+                borderRadius: 16,
+              }}
+            >
+              <img
+                src={confirmedCard.selfieDataUrl}
+                alt={confirmedCard.student.name}
+                className="avatar-lg"
+              />
+            </button>
           ) : (
             <div
               className="avatar-lg"
@@ -641,12 +666,32 @@ export function TeacherScanPage() {
                 >
                   <div className="row">
                     {photo && (
-                      <img
-                        src={photo}
-                        alt={st?.name ?? att.schoolStudentId}
-                        className="avatar"
-                        style={{ width: 38, height: 38 }}
-                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setZoomedSelfie({
+                            src: photo,
+                            alt: st?.name ?? att.schoolStudentId,
+                            caption: `${st?.name ?? att.schoolStudentId} (${att.schoolStudentId})`,
+                          })
+                        }
+                        title={t('tapToZoom')}
+                        aria-label={`${st?.name ?? att.schoolStudentId} — ${t('tapToZoom')}`}
+                        style={{
+                          padding: 0,
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'zoom-in',
+                          borderRadius: 12,
+                        }}
+                      >
+                        <img
+                          src={photo}
+                          alt={st?.name ?? att.schoolStudentId}
+                          className="avatar"
+                          style={{ width: 38, height: 38 }}
+                        />
+                      </button>
                     )}
                     <div>
                       <div style={{ fontWeight: 600 }}>
@@ -690,11 +735,30 @@ export function TeacherScanPage() {
               <div className="stack-sm" style={{ alignItems: 'center' }}>
                 <span className="label">{t('storedSelfie')}</span>
                 {rotationModal.storedSelfieDataUrl ? (
-                  <img
-                    src={rotationModal.storedSelfieDataUrl}
-                    alt="Stored student selfie"
-                    className="avatar-lg"
-                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setZoomedSelfie({
+                        src: rotationModal.storedSelfieDataUrl!,
+                        alt: t('storedSelfie'),
+                        caption: `${rotationModal.storedStudent.name} — ${t('storedSelfie')}`,
+                      })
+                    }
+                    title={t('tapToZoom')}
+                    style={{
+                      padding: 0,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'zoom-in',
+                      borderRadius: 16,
+                    }}
+                  >
+                    <img
+                      src={rotationModal.storedSelfieDataUrl}
+                      alt="Stored student selfie"
+                      className="avatar-lg"
+                    />
+                  </button>
                 ) : (
                   <div className="avatar-lg" />
                 )}
@@ -706,11 +770,30 @@ export function TeacherScanPage() {
               <div className="stack-sm" style={{ alignItems: 'center' }}>
                 <span className="label">{t('newQrSelfie')}</span>
                 {rotationModal.newSelfieDataUrl ? (
-                  <img
-                    src={rotationModal.newSelfieDataUrl}
-                    alt="New QR selfie"
-                    className="avatar-lg"
-                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setZoomedSelfie({
+                        src: rotationModal.newSelfieDataUrl!,
+                        alt: t('newQrSelfie'),
+                        caption: `${rotationModal.storedStudent.name} — ${t('newQrSelfie')}`,
+                      })
+                    }
+                    title={t('tapToZoom')}
+                    style={{
+                      padding: 0,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'zoom-in',
+                      borderRadius: 16,
+                    }}
+                  >
+                    <img
+                      src={rotationModal.newSelfieDataUrl}
+                      alt="New QR selfie"
+                      className="avatar-lg"
+                    />
+                  </button>
                 ) : (
                   <div className="avatar-lg" />
                 )}
@@ -741,6 +824,11 @@ export function TeacherScanPage() {
           </div>
         </div>
       )}
+
+      <SelfieZoomModal
+        image={zoomedSelfie}
+        onClose={() => setZoomedSelfie(null)}
+      />
     </div>
   );
 }

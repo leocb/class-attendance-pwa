@@ -231,6 +231,8 @@ const en = {
   colScanned: 'Scanned',
   colTotalSessions: 'Total Sessions',
   sheetSummary: 'Summary',
+  tapToZoom: 'Tap photo to zoom',
+  closeZoom: 'Close zoomed photo',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -438,6 +440,8 @@ const ptBR: Record<TranslationKey, string> = {
   colScanned: 'Presenças',
   colTotalSessions: 'Total de Aulas',
   sheetSummary: 'Resumo',
+  tapToZoom: 'Toque na foto para ampliar',
+  closeZoom: 'Fechar foto ampliada',
 };
 
 const DICTIONARIES: Record<Locale, Record<TranslationKey, string>> = {

@@ -32,6 +32,10 @@ import {
   putCachedStudent,
 } from '../../../lib/idb';
 import { useI18n } from '../../../lib/i18n';
+import {
+  SelfieZoomModal,
+  type ZoomedSelfie,
+} from '../../../components/SelfieZoomModal';
 import type { Attendance, ClassDoc, Student } from '../../../types';
 
 interface ClassRosterState {
@@ -52,6 +56,7 @@ export function TeacherClassesPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
   const [rosters, setRosters] = useState<Record<string, ClassRosterState>>({});
+  const [zoomedSelfie, setZoomedSelfie] = useState<ZoomedSelfie | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -355,12 +360,32 @@ export function TeacherClassesPage() {
                             >
                               <div className="row">
                                 {selfieUrl ? (
-                                  <img
-                                    src={selfieUrl}
-                                    alt={st.name}
-                                    className="avatar"
-                                    style={{ width: 42, height: 42 }}
-                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setZoomedSelfie({
+                                        src: selfieUrl,
+                                        alt: st.name,
+                                        caption: `${st.name} (${st.schoolStudentId})`,
+                                      })
+                                    }
+                                    title={t('tapToZoom')}
+                                    aria-label={`${st.name} — ${t('tapToZoom')}`}
+                                    style={{
+                                      padding: 0,
+                                      border: 'none',
+                                      background: 'transparent',
+                                      cursor: 'zoom-in',
+                                      borderRadius: 12,
+                                    }}
+                                  >
+                                    <img
+                                      src={selfieUrl}
+                                      alt={st.name}
+                                      className="avatar"
+                                      style={{ width: 42, height: 42 }}
+                                    />
+                                  </button>
                                 ) : (
                                   <div
                                     className="avatar"
@@ -408,6 +433,11 @@ export function TeacherClassesPage() {
           })}
         </div>
       )}
+
+      <SelfieZoomModal
+        image={zoomedSelfie}
+        onClose={() => setZoomedSelfie(null)}
+      />
     </div>
   );
 }
