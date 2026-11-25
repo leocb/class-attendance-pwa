@@ -43,6 +43,9 @@ npm --prefix functions run build
    - **Firestore Database** in Native mode (`(default)`).
    - **Authentication → Sign-in method**: enable **Anonymous**.
    - **Authentication → Settings → Authorized domains**: include `alunos.leobottaro.com`.
+   - **Google Cloud IAM & APIs (required for `createCustomToken` in `passkeyAuth`)**:
+     - Enable the **IAM Service Account Credentials API** (`iamcredentials.googleapis.com`).
+     - In **IAM & Admin → IAM**, grant the Cloud Functions runtime service account (`1088327344408-compute@developer.gserviceaccount.com`) the **`Service Account Token Creator`** (`roles/iam.serviceAccountTokenCreator`) role.
    - Populate `.env` with `VITE_FIREBASE_*` keys and `functions/.env` with:
      ```env
      WEBAUTHN_RP_ID=alunos.leobottaro.com

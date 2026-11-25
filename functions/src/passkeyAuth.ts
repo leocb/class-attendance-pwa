@@ -128,6 +128,10 @@ export const passkeyAuth = onRequest({ cors: true }, async (req, res) => {
         verification.registrationInfo;
 
       const uid: string = challengeData.uid;
+      // Mint the custom token before persisting user/credential records so an IAM
+      // signBlob failure does not leave an orphaned credential behind.
+      const customToken = await auth.createCustomToken(uid, { teacher: true });
+
       await auth.createUser({
         uid,
         displayName: challengeData.displayName || 'Teacher',
@@ -145,7 +149,6 @@ export const passkeyAuth = onRequest({ cors: true }, async (req, res) => {
         createdAt: Date.now(),
       });
 
-      const customToken = await auth.createCustomToken(uid, { teacher: true });
       res.status(200).json({ customToken, uid });
       return;
     }
