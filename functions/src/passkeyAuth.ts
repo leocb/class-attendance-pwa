@@ -16,10 +16,31 @@ function resolveRpContext(req: {
 }) {
   const originHeader =
     (typeof req.headers.origin === 'string' && req.headers.origin) ||
-    'http://localhost:5173';
+    'https://alunos.leobottaro.com';
   const url = new URL(originHeader);
-  const rpID = process.env.WEBAUTHN_RP_ID || url.hostname;
-  const expectedOrigin = process.env.WEBAUTHN_ORIGIN || originHeader;
+
+  const configuredRpIds = (process.env.WEBAUTHN_RP_ID || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const rpID =
+    configuredRpIds.length === 0
+      ? url.hostname
+      : configuredRpIds.includes(url.hostname)
+        ? url.hostname
+        : configuredRpIds[0];
+
+  const configuredOrigins = (process.env.WEBAUTHN_ORIGIN || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const expectedOrigin =
+    configuredOrigins.length === 0
+      ? originHeader
+      : configuredOrigins.length === 1
+        ? configuredOrigins[0]
+        : configuredOrigins;
+
   return { rpID, expectedOrigin };
 }
 

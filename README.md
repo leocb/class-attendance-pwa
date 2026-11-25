@@ -34,11 +34,33 @@ npm --prefix functions run build
 
 ## Firebase Setup & Deployment
 
-1. Create a Firebase project with **Firestore (Native mode)** and **Authentication** (enable **Anonymous** sign-in provider).
-2. Deploy Firestore rules & indexes, Cloud Functions, and Hosting:
+1. Create a Firebase project with **Firestore (Native mode)** and **Authentication** (enable **Anonymous** sign-in provider, and add `alunos.leobottaro.com` under **Authentication → Settings → Authorized domains**).
+2. Configure Cloud Functions WebAuthn env vars (`functions/.env` from `functions/.env.example`):
+   ```env
+   WEBAUTHN_RP_ID=alunos.leobottaro.com
+   WEBAUTHN_ORIGIN=https://alunos.leobottaro.com
+   ```
+3. Deploy Firestore rules & indexes and Cloud Functions:
 
 ```bash
-firebase deploy --only firestore:rules,firestore:indexes,functions,hosting
+firebase deploy --only firestore:rules,firestore:indexes,functions
 ```
 
-> **HTTPS Requirement**: WebAuthn passkeys, `getUserMedia` camera access, and WebCrypto require HTTPS (automatically provided by Firebase Hosting; `localhost` also works for local development).
+## Hosting on Cloudflare (`alunos.leobottaro.com`)
+
+The frontend PWA + same-origin API proxy is configured for **Cloudflare Workers with Static Assets** via [wrangler.jsonc](file:///Users/leocb/Code/Class%20Attendance/wrangler.jsonc) and [worker/index.ts](file:///Users/leocb/Code/Class%20Attendance/worker/index.ts):
+
+- Custom domain route: `alunos.leobottaro.com` (`custom_domain: true`, automatically provisions SSL and DNS when the `leobottaro.com` zone is on Cloudflare).
+- Same-origin proxies `/time`, `/api/time`, and `/api/passkey/*` to your Firebase Cloud Functions while preserving `Origin: https://alunos.leobottaro.com` for WebAuthn passkeys.
+- Sets `Cache-Control: no-cache, no-store, must-revalidate` on `/sw.js` and `Content-Type: application/wasm` on `/zxing_reader.wasm`.
+
+Deploy to Cloudflare:
+
+1. Set your deployed Firebase Functions URL in `wrangler.jsonc` (`FIREBASE_FUNCTIONS_BASE_URL`, or `GET_SERVER_TIME_URL` + `PASSKEY_AUTH_URL` for Gen 2 `a.run.app` URLs).
+2. Authenticate Wrangler and deploy:
+   ```bash
+   npx wrangler login
+   npm run deploy:cf
+   ```
+
+> **HTTPS Requirement**: WebAuthn passkeys, `getUserMedia` camera access, and WebCrypto require HTTPS (automatically provided by Cloudflare for `alunos.leobottaro.com`; `localhost` also works for local development).

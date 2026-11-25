@@ -1,0 +1,6 @@
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/zxing_reader.wasm
+  Content-Type: application/wasm
+  Cache-Control: public, max-age=31536000, immutable

@@ -1,0 +1,31 @@
+{
+  "name": "class-attendance-pwa",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-11-01",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "alunos.leobottaro.com",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/time",
+      "/api/*",
+      "/sw.js",
+      "/zxing_reader.wasm"
+    ]
+  },
+  "vars": {
+    // Set to your Firebase Cloud Functions base URL, e.g.:
+    // https://us-central1-<your-project-id>.cloudfunctions.net
+    "FIREBASE_FUNCTIONS_BASE_URL": "",
+    // Or set explicit Cloud Run / Gen2 function URLs if preferred:
+    "GET_SERVER_TIME_URL": "",
+    "PASSKEY_AUTH_URL": ""
+  }
+}
