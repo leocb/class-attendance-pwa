@@ -37,7 +37,7 @@ if (getApps().length === 0) {
     }),
   });
   authInstance = getAuth(appInstance);
-  functionsInstance = getFunctions(appInstance);
+  functionsInstance = getFunctions(appInstance, 'southamerica-east1');
 
   if (import.meta.env.VITE_USE_EMULATORS === 'true') {
     connectAuthEmulator(authInstance, 'http://127.0.0.1:9099', {
@@ -50,7 +50,7 @@ if (getApps().length === 0) {
   appInstance = getApps()[0];
   firestoreInstance = getFirestore(appInstance);
   authInstance = getAuth(appInstance);
-  functionsInstance = getFunctions(appInstance);
+  functionsInstance = getFunctions(appInstance, 'southamerica-east1');
 }
 
 export const firebaseApp = appInstance;

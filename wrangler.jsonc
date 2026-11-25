@@ -23,10 +23,7 @@
     ]
   },
   "vars": {
-    // Set to your Firebase Cloud Functions base URL, e.g.:
-    // https://us-central1-<your-project-id>.cloudfunctions.net
-    "FIREBASE_FUNCTIONS_BASE_URL": "",
-    // Or set explicit Cloud Run / Gen2 function URLs if preferred:
+    "FIREBASE_FUNCTIONS_BASE_URL": "https://southamerica-east1-classroom-attendance-a03af.cloudfunctions.net",
     "GET_SERVER_TIME_URL": "",
     "PASSKEY_AUTH_URL": ""
   }
