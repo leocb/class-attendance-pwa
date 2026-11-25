@@ -210,3 +210,18 @@ export async function getCachedAttendanceByClassAndDate(
   const db = await getDb();
   return db.getAllFromIndex('cache:attendance', 'by-class-date', [classId, sessionDate]);
 }
+
+export async function clearTeacherCaches(): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(
+    ['cache:students', 'cache:selfies', 'cache:classes', 'cache:attendance'],
+    'readwrite'
+  );
+  await Promise.all([
+    tx.objectStore('cache:students').clear(),
+    tx.objectStore('cache:selfies').clear(),
+    tx.objectStore('cache:classes').clear(),
+    tx.objectStore('cache:attendance').clear(),
+    tx.done,
+  ]);
+}

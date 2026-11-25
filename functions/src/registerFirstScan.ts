@@ -8,7 +8,10 @@ import {
   qrPayloadSchema,
   verifyQrSignature,
 } from './crypto';
-import { downloadAndVerifySelfieFromStorage } from './storageHelper';
+import {
+  buildSelfieStoragePath,
+  downloadAndVerifySelfieFromStorage,
+} from './storageHelper';
 
 const requestSchema = z.object({
   qrPayload: qrPayloadSchema,
@@ -66,11 +69,33 @@ export const registerFirstScan = onCall(async (request) => {
 
     const student = studentSnap.data()!;
 
+    if (qrPayload.n !== student.name) {
+      throw new HttpsError(
+        'permission-denied',
+        'QR student name does not match registered student record.'
+      );
+    }
+
     if (qrPayload.fp !== student.keyFingerprint) {
       return {
         status: 'ROTATION_REQUIRED' as const,
         student,
       };
+    }
+
+    if (qrPayload.sh !== student.selfieHash) {
+      throw new HttpsError(
+        'permission-denied',
+        'QR selfie hash does not match registered student record.'
+      );
+    }
+
+    const expectedPath = buildSelfieStoragePath(qrPayload.sid, qrPayload.fp);
+    if (student.selfiePath !== expectedPath) {
+      throw new HttpsError(
+        'permission-denied',
+        'Student selfie storage path mismatch.'
+      );
     }
 
     const storedJwk = ecPublicJwkSchema.parse(student.publicKeyJwk);
@@ -81,6 +106,13 @@ export const registerFirstScan = onCall(async (request) => {
     if (!verifyQrSignature(storedJwk, qrPayload)) {
       throw new HttpsError('permission-denied', 'Invalid QR cryptographic signature.');
     }
+
+    // Verify selfie exists in Storage and matches the signed SHA-256 hash
+    await downloadAndVerifySelfieFromStorage(
+      qrPayload.sid,
+      qrPayload.fp,
+      qrPayload.sh
+    );
 
     tx.update(studentRef, {
       authorizedTeacherUids: FieldValue.arrayUnion(teacherUid),

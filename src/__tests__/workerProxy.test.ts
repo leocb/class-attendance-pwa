@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import worker, { type WorkerEnv } from '../../worker/index';
 
-describe('Cloudflare Worker static assets & Firebase proxy', () => {
+describe('Cloudflare Worker static assets, security gates & Firebase proxy', () => {
   it('sets no-cache headers on /sw.js and application/wasm on .wasm assets', async () => {
     const env: WorkerEnv = {
       ASSETS: {
@@ -29,7 +29,37 @@ describe('Cloudflare Worker static assets & Firebase proxy', () => {
     expect(wasmRes.headers.get('Content-Type')).toBe('application/wasm');
   });
 
-  it('returns 503 when proxy env vars are unset and proxies /time & /api/passkey/* when set', async () => {
+  it('rejects unknown passkey subpaths and disallowed HTTP methods at the edge', async () => {
+    const env: WorkerEnv = {
+      ASSETS: { fetch: vi.fn(async () => new Response('ok')) },
+      FIREBASE_FUNCTIONS_BASE_URL:
+        'https://southamerica-east1-classroom-attendance-a03af.cloudfunctions.net',
+    };
+
+    const badPath = await worker.fetch(
+      new Request('https://alunos.leobottaro.com/api/passkey/admin', {
+        method: 'POST',
+      }),
+      env
+    );
+    expect(badPath.status).toBe(404);
+
+    const badMethodPasskey = await worker.fetch(
+      new Request('https://alunos.leobottaro.com/api/passkey/login/options', {
+        method: 'GET',
+      }),
+      env
+    );
+    expect(badMethodPasskey.status).toBe(405);
+
+    const badMethodTime = await worker.fetch(
+      new Request('https://alunos.leobottaro.com/time', { method: 'POST' }),
+      env
+    );
+    expect(badMethodTime.status).toBe(405);
+  });
+
+  it('proxies /time, /api/passkey/*, and /api/turnstile/verify cleanly when configured', async () => {
     const emptyEnv: WorkerEnv = {
       ASSETS: { fetch: vi.fn(async () => new Response('ok')) },
     };
@@ -47,12 +77,15 @@ describe('Cloudflare Worker static assets & Firebase proxy', () => {
       )
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ challengeId: 'c1' }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), { status: 200 })
       );
 
     const configuredEnv: WorkerEnv = {
       ...emptyEnv,
       FIREBASE_FUNCTIONS_BASE_URL:
-        'https://us-central1-demo-project.cloudfunctions.net',
+        'https://southamerica-east1-demo-project.cloudfunctions.net',
     };
 
     const timeRes = await worker.fetch(
@@ -62,7 +95,7 @@ describe('Cloudflare Worker static assets & Firebase proxy', () => {
     expect(timeRes.status).toBe(200);
     expect(fetchSpy).toHaveBeenNthCalledWith(
       1,
-      'https://us-central1-demo-project.cloudfunctions.net/getServerTime',
+      'https://southamerica-east1-demo-project.cloudfunctions.net/getServerTime',
       expect.objectContaining({ method: 'GET' })
     );
 
@@ -72,15 +105,29 @@ describe('Cloudflare Worker static assets & Firebase proxy', () => {
         headers: {
           'Content-Type': 'application/json',
           Origin: 'https://alunos.leobottaro.com',
+          'X-Secret-Test': 'should-not-forward',
         },
         body: JSON.stringify({ displayName: 'Prof. Leo' }),
       }),
       configuredEnv
     );
     expect(passkeyRes.status).toBe(200);
+    const forwardedHeaders = fetchSpy.mock.calls[1][1]?.headers as Headers;
+    expect(forwardedHeaders.get('x-secret-test')).toBeNull();
+    expect(forwardedHeaders.get('origin')).toBe('https://alunos.leobottaro.com');
+
+    const turnstileRes = await worker.fetch(
+      new Request('https://alunos.leobottaro.com/api/turnstile/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ turnstileToken: 'tok', action: 'student_register' }),
+      }),
+      configuredEnv
+    );
+    expect(turnstileRes.status).toBe(200);
     expect(fetchSpy).toHaveBeenNthCalledWith(
-      2,
-      'https://us-central1-demo-project.cloudfunctions.net/passkeyAuth/api/passkey/register/options',
+      3,
+      'https://southamerica-east1-demo-project.cloudfunctions.net/verifyTurnstile',
       expect.objectContaining({ method: 'POST' })
     );
 

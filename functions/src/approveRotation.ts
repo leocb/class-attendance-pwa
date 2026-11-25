@@ -59,7 +59,6 @@ export const approveRotation = onCall(async (request) => {
     );
   }
 
-  // Verify the new selfie exists in Firebase Storage and matches signed qrPayload.sh
   const verifiedSelfie = await downloadAndVerifySelfieFromStorage(
     qrPayload.sid,
     qrPayload.fp,
@@ -89,6 +88,25 @@ export const approveRotation = onCall(async (request) => {
     }
 
     const existing = studentSnap.data()!;
+
+    if (qrPayload.n !== existing.name) {
+      throw new HttpsError(
+        'permission-denied',
+        'Recovery QR student name does not match registered record.'
+      );
+    }
+
+    if (
+      existing.lastRotationNonce === qrPayload.nce ||
+      (typeof existing.lastRotationTs === 'number' &&
+        qrPayload.ts < existing.lastRotationTs)
+    ) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Stale or replayed rotation QR.'
+      );
+    }
+
     const oldEntry = {
       fingerprint: existing.keyFingerprint,
       publicKeyJwk: existing.publicKeyJwk,
@@ -121,6 +139,8 @@ export const approveRotation = onCall(async (request) => {
       selfiePath: verifiedSelfie.path,
       selfieHash: qrPayload.sh,
       rotatedKeys: nextRotatedKeys,
+      lastRotationNonce: qrPayload.nce,
+      lastRotationTs: qrPayload.ts,
       authorizedTeacherUids: FieldValue.arrayUnion(teacherUid),
     });
 

@@ -11,9 +11,25 @@ import {
 } from '@simplewebauthn/browser';
 import { auth } from './client';
 import { CONFIG } from '../config';
+import { clearTeacherCaches } from '../idb';
 
 function passkeyEndpoint(path: string): string {
   return `${CONFIG.FUNCTIONS_BASE_URL}/api/passkey${path}`;
+}
+
+export async function verifyOnlineTurnstile(
+  turnstileToken: string,
+  action: 'student_register' | 'student_recover'
+): Promise<void> {
+  const res = await fetch(`${CONFIG.FUNCTIONS_BASE_URL}/api/turnstile/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ turnstileToken, action }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Bot verification failed.');
+  }
 }
 
 export async function ensureStudentAnonymousAuth(): Promise<User> {
@@ -28,7 +44,10 @@ export function isPasskeySupported(): boolean {
   return browserSupportsWebAuthn();
 }
 
-export async function registerTeacherWithPasskey(displayName?: string): Promise<User> {
+export async function registerTeacherWithPasskey(
+  displayName?: string,
+  turnstileToken?: string
+): Promise<User> {
   if (!browserSupportsWebAuthn()) {
     throw new Error('Passkeys (WebAuthn) are not supported on this browser.');
   }
@@ -36,7 +55,10 @@ export async function registerTeacherWithPasskey(displayName?: string): Promise<
   const optionsRes = await fetch(passkeyEndpoint('/register/options'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ displayName: displayName?.trim() || 'Teacher' }),
+    body: JSON.stringify({
+      displayName: displayName?.trim() || 'Teacher',
+      turnstileToken,
+    }),
   });
 
   if (!optionsRes.ok) {
@@ -60,12 +82,13 @@ export async function registerTeacherWithPasskey(displayName?: string): Promise<
 
   const { customToken } = (await verifyRes.json()) as { customToken: string };
   const userCred = await signInWithCustomToken(auth, customToken);
-  // Ensure fresh ID token containing the { teacher: true } custom claim
   await userCred.user.getIdToken(true);
   return userCred.user;
 }
 
-export async function signInTeacherWithPasskey(): Promise<User> {
+export async function signInTeacherWithPasskey(
+  turnstileToken?: string
+): Promise<User> {
   if (!browserSupportsWebAuthn()) {
     throw new Error('Passkeys (WebAuthn) are not supported on this browser.');
   }
@@ -73,7 +96,7 @@ export async function signInTeacherWithPasskey(): Promise<User> {
   const optionsRes = await fetch(passkeyEndpoint('/login/options'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ turnstileToken }),
   });
 
   if (!optionsRes.ok) {
@@ -102,7 +125,7 @@ export async function signInTeacherWithPasskey(): Promise<User> {
 }
 
 export async function signOutTeacher(): Promise<void> {
-  await firebaseSignOut(auth);
+  await Promise.all([firebaseSignOut(auth), clearTeacherCaches()]);
 }
 
 export async function isTeacherAuthenticated(user: User | null): Promise<boolean> {

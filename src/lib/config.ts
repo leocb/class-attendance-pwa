@@ -17,6 +17,9 @@ export const CONFIG = {
   /** Maximum allowed selfie file size in bytes (1 MB). */
   SELFIE_MAX_BYTES: 1024 * 1024,
 
+  /** Cloudflare Turnstile public sitekey. */
+  TURNSTILE_SITE_KEY: import.meta.env.VITE_TURNSTILE_SITE_KEY ?? '',
+
   /** Base URL for Cloud Functions HTTP endpoints (empty = same origin / Worker proxy). */
   FUNCTIONS_BASE_URL: (import.meta.env.VITE_FUNCTIONS_BASE_URL ?? '').replace(/\/$/, ''),
 } as const;

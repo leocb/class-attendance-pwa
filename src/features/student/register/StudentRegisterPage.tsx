@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { doc, setDoc } from 'firebase/firestore';
 import { ShieldCheck, KeyRound } from 'lucide-react';
 import { SelfieCapture } from '../../../components/SelfieCapture';
+import { TurnstileWidget } from '../../../components/TurnstileWidget';
+import { CONFIG } from '../../../lib/config';
 import type { EncodedSelfie } from '../../../lib/image/selfie';
 import {
   computeFingerprintFromSpki,
@@ -16,7 +18,10 @@ import {
   saveStudentPrivateKeyInitial,
   saveStudentProfile,
 } from '../../../lib/idb';
-import { ensureStudentAnonymousAuth } from '../../../lib/firebase/auth';
+import {
+  ensureStudentAnonymousAuth,
+  verifyOnlineTurnstile,
+} from '../../../lib/firebase/auth';
 import { db } from '../../../lib/firebase/client';
 import {
   buildSelfieStoragePath,
@@ -38,6 +43,12 @@ export function StudentRegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
+  const requireOnlineTurnstile =
+    typeof navigator !== 'undefined' &&
+    navigator.onLine &&
+    Boolean(CONFIG.TURNSTILE_SITE_KEY);
 
   useEffect(() => {
     void (async () => {
@@ -65,12 +76,20 @@ export function StudentRegisterPage() {
       setError(t('errMissingSelfie'));
       return;
     }
+    if (navigator.onLine && CONFIG.TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError(t('errTurnstileRequired'));
+      return;
+    }
 
     setSubmitting(true);
     try {
       const existingKey = await getStudentPrivateKey();
       if (existingKey) {
         throw new Error(t('errExistingKey'));
+      }
+
+      if (navigator.onLine && CONFIG.TURNSTILE_SITE_KEY && turnstileToken) {
+        await verifyOnlineTurnstile(turnstileToken, 'student_register');
       }
 
       const user = await ensureStudentAnonymousAuth();
@@ -159,6 +178,7 @@ export function StudentRegisterPage() {
       setError(err instanceof Error ? err.message : t('errRegFailed'));
     } finally {
       setSubmitting(false);
+      setTurnstileReset((n) => n + 1);
     }
   };
 
@@ -232,11 +252,21 @@ export function StudentRegisterPage() {
 
         <SelfieCapture value={selfie} onChange={setSelfie} />
 
+        {requireOnlineTurnstile && (
+          <TurnstileWidget
+            action="student_register"
+            onToken={setTurnstileToken}
+            resetTrigger={turnstileReset}
+          />
+        )}
+
         <div className="row-between">
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={submitting}
+            disabled={
+              submitting || (requireOnlineTurnstile && !turnstileToken)
+            }
           >
             {submitting ? t('generatingKey') : t('completeRegistration')}
           </button>

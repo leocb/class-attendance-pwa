@@ -274,4 +274,71 @@ describe('Teacher Scan Pipeline (Storage + Local Cache)', () => {
     expect(cachedAfter?.keyFingerprint).toBe(newFixture.student.keyFingerprint);
     expect(cachedAfter?.rotatedKeys).toHaveLength(1);
   });
+
+  it('rejects name/selfie-hash tampering and cross-class nonce replay', async () => {
+    const { keyPair, student } = await createStudentFixture('S1002', 'Carla Dias');
+    const seenNonces = new Set<string>();
+    const { deps, studentCache } = makeMemoryDeps({
+      isOnline: () => false,
+      hasAndMarkNonce: (sid, nce) => {
+        const key = `${sid}__${nce}`;
+        if (seenNonces.has(key)) return true;
+        seenNonces.add(key);
+        return false;
+      },
+    });
+    studentCache.set(student.schoolStudentId, student);
+
+    // Student alters local name while signing with their own key
+    const forgedNameQr = await signQr(
+      { ...student, name: 'Fake Student' },
+      keyPair.privateKey,
+      1712345678
+    );
+    const nameRes = await processScannedQr(
+      forgedNameQr.raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      deps
+    );
+    expect(nameRes.status).toBe('REJECTED');
+    if (nameRes.status === 'REJECTED') {
+      expect(nameRes.code).toBe('NAME_MISMATCH');
+    }
+
+    // Student alters local selfieHash while signing with their own key
+    const forgedHashQr = await signQr(
+      student,
+      keyPair.privateKey,
+      1712345678,
+      { sh: '0'.repeat(64) }
+    );
+    const hashRes = await processScannedQr(
+      forgedHashQr.raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      deps
+    );
+    expect(hashRes.status).toBe('REJECTED');
+    if (hashRes.status === 'REJECTED') {
+      expect(hashRes.code).toBe('SELFIE_HASH_MISMATCH');
+    }
+
+    // Valid QR scanned in Class 1 succeeds, replaying exact nonce in Class 2 is rejected
+    const validQr = await signQr(student, keyPair.privateKey, 1712345678);
+    const c1Res = await processScannedQr(
+      validQr.raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      deps
+    );
+    expect(c1Res.status).toBe('RECORDED');
+
+    const c2ReplayRes = await processScannedQr(
+      validQr.raw,
+      { classId: 'c2', teacherUid: 'teacher-1' },
+      deps
+    );
+    expect(c2ReplayRes.status).toBe('REJECTED');
+    if (c2ReplayRes.status === 'REJECTED') {
+      expect(c2ReplayRes.code).toBe('REPLAYED_NONCE');
+    }
+  });
 });

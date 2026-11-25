@@ -15,7 +15,7 @@ Production-ready, offline-first Progressive Web App for classroom attendance usi
 - **Auth**:
   - **Teachers**: WebAuthn passkeys only (`@simplewebauthn/browser` + `@simplewebauthn/server` in `passkeyAuth` Cloud Function) minting Firebase custom tokens with `{ teacher: true }`. No email, password, or recovery.
   - **Students**: Anonymous Firebase Auth (`signInAnonymously`) at registration only; identified by school ID in signed QR.
-- **Backend (`functions/`)**: Firebase Cloud Functions v2 (`registerFirstScan`, `getRotationSelfie`, `approveRotation`, `getServerTime`, `passkeyAuth`) in `southamerica-east1`, plus strict Firestore & Storage security rules (`firestore.rules`, `storage.rules`).
+- **Backend (`functions/`)**: Firebase Cloud Functions v2 (`registerFirstScan`, `getRotationSelfie`, `approveRotation`, `getServerTime`, `passkeyAuth`, `verifyTurnstile`) in `southamerica-east1`, plus strict Firestore & Storage security rules (`firestore.rules`, `storage.rules`) and Cloudflare Turnstile bot protection.
 - **Offline Excel Export (`src/lib/excel`)**: In-browser XLSX generation via `exceljs` from IndexedDB caches (`✓`, `A`, `—`, `Presence %`, optional `Summary` sheet).
 
 ## Local Development & Testing
@@ -48,11 +48,14 @@ npm --prefix functions run build
    - **Google Cloud IAM & APIs (required for `createCustomToken` in `passkeyAuth`)**:
      - Enable the **IAM Service Account Credentials API** (`iamcredentials.googleapis.com`).
      - In **IAM & Admin → IAM**, grant the Cloud Functions runtime service account (`1088327344408-compute@developer.gserviceaccount.com`) the **`Service Account Token Creator`** (`roles/iam.serviceAccountTokenCreator`) role.
-   - Populate `.env` with `VITE_FIREBASE_*` keys and `functions/.env` with:
+   - Populate `.env` with `VITE_FIREBASE_*` keys and `VITE_TURNSTILE_SITE_KEY`, and `functions/.env` with:
      ```env
      WEBAUTHN_RP_ID=alunos.leobottaro.com
      WEBAUTHN_ORIGIN=https://alunos.leobottaro.com
+     TURNSTILE_SECRET=<your-turnstile-secret>
+     TURNSTILE_HOSTNAMES=alunos.leobottaro.com
      ```
+   - Optional: enable a Firestore TTL policy on `webauthn_challenges.expireAt` so unverified WebAuthn challenges are automatically purged.
 2. **Cloudflare (`leobottaro.com` zone)**:
    - Authenticate Wrangler once (`npx wrangler login`).
    - [wrangler.jsonc](wrangler.jsonc) binds `alunos.leobottaro.com` (`custom_domain: true`) and sets `FIREBASE_FUNCTIONS_BASE_URL` to `https://southamerica-east1-classroom-attendance-a03af.cloudfunctions.net`.

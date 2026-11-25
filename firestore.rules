@@ -15,15 +15,44 @@ service cloud.firestore {
       // No directory enumeration, ever.
       allow list: if false;
 
-      // Students create their own document (deviceUid must match).
+      // Students create their own document (strict schema + deviceUid must match).
       allow create: if request.auth != null
+        && sid.size() >= 1 && sid.size() <= 64
+        && request.resource.data.keys().hasOnly([
+          'schoolStudentId',
+          'name',
+          'deviceUid',
+          'publicKeyJwk',
+          'keyFingerprint',
+          'selfiePath',
+          'selfieHash',
+          'registrationTimestamp',
+          'authorizedTeacherUids',
+          'rotatedKeys'
+        ])
+        && request.resource.data.schoolStudentId == sid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 120
         && request.resource.data.deviceUid == request.auth.uid
+        && request.resource.data.publicKeyJwk is map
+        && request.resource.data.publicKeyJwk.kty == 'EC'
+        && request.resource.data.publicKeyJwk.crv == 'P-256'
+        && request.resource.data.publicKeyJwk.x is string
+        && request.resource.data.publicKeyJwk.y is string
+        && request.resource.data.keyFingerprint is string
+        && request.resource.data.keyFingerprint.matches('^[A-Z2-7]{8}$')
+        && request.resource.data.selfiePath == 'selfies/' + sid + '/' + request.resource.data.keyFingerprint + '.webp'
+        && request.resource.data.selfieHash is string
+        && request.resource.data.selfieHash.matches('^[0-9a-f]{64}$')
+        && request.resource.data.registrationTimestamp is int
+        && request.resource.data.registrationTimestamp > 0
+        && request.resource.data.authorizedTeacherUids is list
         && request.resource.data.authorizedTeacherUids.size() == 0
+        && request.resource.data.rotatedKeys is list
         && request.resource.data.rotatedKeys.size() == 0;
 
       // All updates flow through Cloud Functions (admin SDK bypasses rules).
-      // Direct client updates are forbidden — this is how we guarantee that
-      // authorization only happens after signature verification.
       allow update, delete: if false;
     }
 
@@ -31,8 +60,23 @@ service cloud.firestore {
       allow get, list: if isTeacher()
         && resource.data.teacherUid == request.auth.uid;
       allow create: if isTeacher()
+        && cid.size() >= 1 && cid.size() <= 128
+        && request.resource.data.keys().hasOnly([
+          'classId',
+          'name',
+          'teacherUid',
+          'studentIds',
+          'createdAt'
+        ])
+        && request.resource.data.classId == cid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 120
         && request.resource.data.teacherUid == request.auth.uid
-        && request.resource.data.studentIds.size() == 0;
+        && request.resource.data.studentIds is list
+        && request.resource.data.studentIds.size() == 0
+        && request.resource.data.createdAt is int
+        && request.resource.data.createdAt > 0;
       // Updates to studentIds happen only via Cloud Functions.
       allow update, delete: if false;
     }
@@ -41,7 +85,31 @@ service cloud.firestore {
       allow read: if isTeacher()
         && resource.data.teacherUid == request.auth.uid;
       allow create: if isTeacher()
-        && request.resource.data.teacherUid == request.auth.uid;
+        && request.resource.data.keys().hasOnly([
+          'attendanceId',
+          'classId',
+          'sessionDate',
+          'schoolStudentId',
+          'teacherUid',
+          'scannedAt',
+          'studentTs',
+          'studentKeyFingerprint',
+          'signatureValid'
+        ])
+        && request.resource.data.teacherUid == request.auth.uid
+        && get(/databases/$(database)/documents/classes/$(request.resource.data.classId)).data.teacherUid == request.auth.uid
+        && request.resource.data.signatureValid == true
+        && request.resource.data.sessionDate is string
+        && request.resource.data.sessionDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.schoolStudentId is string
+        && request.resource.data.schoolStudentId.size() >= 1
+        && request.resource.data.schoolStudentId.size() <= 64
+        && request.resource.data.studentKeyFingerprint is string
+        && request.resource.data.studentKeyFingerprint.matches('^[A-Z2-7]{8}$')
+        && request.resource.data.scannedAt is int
+        && request.resource.data.scannedAt > 0
+        && request.resource.data.studentTs is int
+        && request.resource.data.studentTs > 0;
       allow update, delete: if false;
     }
 

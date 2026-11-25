@@ -33,7 +33,8 @@ Always consult [README.md](README.md) (**Updating & Redeploying**) before modify
 - **Firestore Rules & Collections**:
   - Never allow client-side `update`/`delete` on `students` or `classes`, and never allow `list` on `students`.
   - Do not introduce `sessions` or `keyRotationRequests` collections or manual "add student by ID" UI.
-  - Keep `functions/.env` (`WEBAUTHN_RP_ID`, `WEBAUTHN_ORIGIN`) and `.env` gitignored.
+  - Keep `functions/.env` (`WEBAUTHN_RP_ID`, `WEBAUTHN_ORIGIN`, `TURNSTILE_SECRET`, `TURNSTILE_HOSTNAMES`) and `.env` gitignored.
+- **Bot Protection**: Teacher passkey login/registration and online student registration/recovery use Cloudflare Turnstile (`TurnstileWidget` + server-side `verifyTurnstileToken` checking `success`, `action`, and `TURNSTILE_HOSTNAMES`).
 
 ## Verification & Git Workflow
 

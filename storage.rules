@@ -9,11 +9,16 @@ service firebase.storage {
 
       allow list: if false;
 
-      // Students upload their own immutable WebP selfie (<= 1 MB).
+      // Students upload their own immutable WebP selfie (<= 1 MB, exact fingerprint filename).
       allow create: if request.auth != null
+        && sid.size() >= 1 && sid.size() <= 64
+        && fileName.matches('^[A-Z2-7]{8}\\.webp$')
         && request.resource.size <= 1048576
         && request.resource.contentType == 'image/webp'
-        && request.resource.metadata.deviceUid == request.auth.uid;
+        && request.resource.metadata != null
+        && request.resource.metadata.deviceUid == request.auth.uid
+        && request.resource.metadata.fingerprint is string
+        && fileName == request.resource.metadata.fingerprint + '.webp';
 
       allow update, delete: if false;
     }

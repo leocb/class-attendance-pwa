@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Fingerprint, KeyRound, UserPlus } from 'lucide-react';
 import { useApp } from '../../../app/AppProvider';
+import { TurnstileWidget } from '../../../components/TurnstileWidget';
+import { CONFIG } from '../../../lib/config';
 import {
   isPasskeySupported,
   registerTeacherWithPasskey,
@@ -17,6 +19,11 @@ export function TeacherLoginPage() {
   const [busy, setBusy] = useState<'login' | 'register' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [loginToken, setLoginToken] = useState<string | null>(null);
+  const [loginReset, setLoginReset] = useState(0);
+  const [regToken, setRegToken] = useState<string | null>(null);
+  const [regReset, setRegReset] = useState(0);
+
   useEffect(() => {
     if (isTeacher) {
       navigate('/teacher/classes', { replace: true });
@@ -24,26 +31,36 @@ export function TeacherLoginPage() {
   }, [isTeacher, navigate]);
 
   const supported = isPasskeySupported();
+  const turnstileEnabled = Boolean(CONFIG.TURNSTILE_SITE_KEY);
 
   const handleLogin = async () => {
     setError(null);
+    if (turnstileEnabled && !loginToken) {
+      setError(t('errTurnstileRequired'));
+      return;
+    }
     setBusy('login');
     try {
-      await signInTeacherWithPasskey();
+      await signInTeacherWithPasskey(loginToken ?? undefined);
       navigate('/teacher/classes', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Passkey sign-in failed.');
     } finally {
       setBusy(null);
+      setLoginReset((n) => n + 1);
     }
   };
 
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (turnstileEnabled && !regToken) {
+      setError(t('errTurnstileRequired'));
+      return;
+    }
     setBusy('register');
     try {
-      await registerTeacherWithPasskey(displayName);
+      await registerTeacherWithPasskey(displayName, regToken ?? undefined);
       navigate('/teacher/classes', { replace: true });
     } catch (err) {
       setError(
@@ -51,6 +68,7 @@ export function TeacherLoginPage() {
       );
     } finally {
       setBusy(null);
+      setRegReset((n) => n + 1);
     }
   };
 
@@ -79,10 +97,23 @@ export function TeacherLoginPage() {
 
         {error && <div className="alert alert-danger">{error}</div>}
 
+        {isOnline && (
+          <TurnstileWidget
+            action="teacher_login"
+            onToken={setLoginToken}
+            resetTrigger={loginReset}
+          />
+        )}
+
         <button
           type="button"
           className="btn btn-primary"
-          disabled={!supported || !isOnline || busy !== null}
+          disabled={
+            !supported ||
+            !isOnline ||
+            busy !== null ||
+            (turnstileEnabled && !loginToken)
+          }
           onClick={handleLogin}
         >
           <KeyRound size={18} />
@@ -119,10 +150,24 @@ export function TeacherLoginPage() {
               onChange={(e) => setDisplayName(e.target.value)}
             />
           </div>
+
+          {isOnline && (
+            <TurnstileWidget
+              action="teacher_register"
+              onToken={setRegToken}
+              resetTrigger={regReset}
+            />
+          )}
+
           <button
             type="submit"
             className="btn"
-            disabled={!supported || !isOnline || busy !== null}
+            disabled={
+              !supported ||
+              !isOnline ||
+              busy !== null ||
+              (turnstileEnabled && !regToken)
+            }
           >
             <Fingerprint size={18} />
             {busy === 'register'

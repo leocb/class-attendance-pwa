@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { KeyRound } from 'lucide-react';
 import { SelfieCapture } from '../../../components/SelfieCapture';
+import { TurnstileWidget } from '../../../components/TurnstileWidget';
+import { CONFIG } from '../../../lib/config';
 import type { EncodedSelfie } from '../../../lib/image/selfie';
 import {
   computeFingerprintFromSpki,
@@ -13,7 +15,10 @@ import {
   replaceStudentPrivateKeyForRecovery,
   saveStudentProfile,
 } from '../../../lib/idb';
-import { ensureStudentAnonymousAuth } from '../../../lib/firebase/auth';
+import {
+  ensureStudentAnonymousAuth,
+  verifyOnlineTurnstile,
+} from '../../../lib/firebase/auth';
 import {
   buildSelfieStoragePath,
   uploadStudentSelfie,
@@ -30,6 +35,12 @@ export function StudentRecoverPage() {
   const [selfie, setSelfie] = useState<EncodedSelfie | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
+  const requireOnlineTurnstile =
+    typeof navigator !== 'undefined' &&
+    navigator.onLine &&
+    Boolean(CONFIG.TURNSTILE_SITE_KEY);
 
   const handleRecover = async (e: FormEvent) => {
     e.preventDefault();
@@ -45,9 +56,16 @@ export function StudentRecoverPage() {
       setError(t('errRecoverSelfie'));
       return;
     }
+    if (navigator.onLine && CONFIG.TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError(t('errTurnstileRequired'));
+      return;
+    }
 
     setSubmitting(true);
     try {
+      if (navigator.onLine && CONFIG.TURNSTILE_SITE_KEY && turnstileToken) {
+        await verifyOnlineTurnstile(turnstileToken, 'student_recover');
+      }
       const keyPair = await generateStudentKeyPair();
       const [spkiBytes, publicKeyJwk] = await Promise.all([
         exportSpkiBytes(keyPair.publicKey),
@@ -98,6 +116,7 @@ export function StudentRecoverPage() {
       setError(err instanceof Error ? err.message : t('errRecoverFailed'));
     } finally {
       setSubmitting(false);
+      setTurnstileReset((n) => n + 1);
     }
   };
 
@@ -150,11 +169,21 @@ export function StudentRecoverPage() {
 
         <SelfieCapture value={selfie} onChange={setSelfie} />
 
+        {requireOnlineTurnstile && (
+          <TurnstileWidget
+            action="student_recover"
+            onToken={setTurnstileToken}
+            resetTrigger={turnstileReset}
+          />
+        )}
+
         <div className="row-between">
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={submitting}
+            disabled={
+              submitting || (requireOnlineTurnstile && !turnstileToken)
+            }
           >
             {submitting ? t('generatingNewKey') : t('generateRecoveryQr')}
           </button>

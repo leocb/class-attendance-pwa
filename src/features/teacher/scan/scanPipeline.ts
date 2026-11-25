@@ -17,6 +17,9 @@ export type ScanErrorCode =
   | 'ROTATION_OFFLINE'
   | 'INVALID_SIGNATURE'
   | 'EXPIRED_QR'
+  | 'NAME_MISMATCH'
+  | 'SELFIE_HASH_MISMATCH'
+  | 'REPLAYED_NONCE'
   | 'ROTATION_FAILED'
   | 'SELFIE_FETCH_FAILED';
 
@@ -60,6 +63,7 @@ export interface ScanPipelineDeps {
   getEstimatedNowSec?: () => Promise<number>;
   getSessionDate?: () => string;
   classStudentIds?: string[];
+  hasAndMarkNonce?: (sid: string, nce: string) => boolean;
 }
 
 export type ScanOutcome =
@@ -192,6 +196,19 @@ export async function processScannedQr(
       return { status: 'REJECTED', code: 'EXPIRED_QR' };
     }
 
+    // Check name & selfie hash consistency against stored student record
+    if (qr.n !== student.name) {
+      return { status: 'REJECTED', code: 'NAME_MISMATCH' };
+    }
+    if (qr.sh !== student.selfieHash) {
+      return { status: 'REJECTED', code: 'SELFIE_HASH_MISMATCH' };
+    }
+
+    // Prevent identical QR nonce replay across classes within the active window
+    if (deps.hasAndMarkNonce && deps.hasAndMarkNonce(qr.sid, qr.nce)) {
+      return { status: 'REJECTED', code: 'REPLAYED_NONCE' };
+    }
+
     // Sync membership to this class when online if needed
     if (
       deps.isOnline() &&
@@ -200,9 +217,11 @@ export async function processScannedQr(
     ) {
       void deps.registerFirstScan(qr, params.classId).catch(() => {});
     }
+  } else if (deps.hasAndMarkNonce) {
+    deps.hasAndMarkNonce(qr.sid, qr.nce);
   }
 
-  // 6. Selfie hash consistency (warn, don't hard-reject)
+  // 6. Selfie hash consistency verified above
   const selfieWarning = qr.sh !== student.selfieHash;
 
   // 7. Ensure selfie is cached locally in IDB (downloaded once from Firebase Storage)

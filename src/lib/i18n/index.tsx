@@ -206,6 +206,10 @@ const en = {
   errExpiredQr: 'QR code expired (older than 180 seconds). Ask student to show live QR.',
   errRotationFailed: 'Key rotation approval failed.',
   errSelfieFetchFailed: 'Could not download student selfie from Firebase Storage.',
+  errNameMismatch: 'QR student name does not match registered record.',
+  errSelfieHashMismatch: 'QR selfie hash does not match registered record.',
+  errReplayedNonce: 'Duplicate QR nonce detected (replay rejected).',
+  errTurnstileRequired: 'Please complete the human verification check first.',
 
   // Export
   exportTitle: 'Export Attendance (XLSX)',
@@ -415,6 +419,10 @@ const ptBR: Record<TranslationKey, string> = {
   errExpiredQr: 'QR code expirado (mais de 180 segundos). Peça ao aluno o QR ao vivo.',
   errRotationFailed: 'Falha ao aprovar troca de chave.',
   errSelfieFetchFailed: 'Não foi possível baixar a foto do aluno no Firebase Storage.',
+  errNameMismatch: 'O nome no QR não confere com o registro do aluno.',
+  errSelfieHashMismatch: 'O hash da foto no QR não confere com o registro do aluno.',
+  errReplayedNonce: 'QR já utilizado nesta janela (repetição rejeitada).',
+  errTurnstileRequired: 'Conclua a verificação anti-robô antes de continuar.',
 
   // Export
   exportTitle: 'Exportar Chamada (XLSX)',

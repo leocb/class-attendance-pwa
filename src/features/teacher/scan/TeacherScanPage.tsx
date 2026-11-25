@@ -96,6 +96,7 @@ export function TeacherScanPage() {
 
   const today = getLocalSessionDate();
   const seenTodayRef = useRef<Set<string>>(new Set());
+  const seenNoncesRef = useRef<Map<string, number>>(new Map());
 
   const formatScanError = useCallback(
     (code: ScanErrorCode, detail?: string): string => {
@@ -112,6 +113,12 @@ export function TeacherScanPage() {
           return t('errInvalidSignature');
         case 'EXPIRED_QR':
           return t('errExpiredQr');
+        case 'NAME_MISMATCH':
+          return t('errNameMismatch');
+        case 'SELFIE_HASH_MISMATCH':
+          return t('errSelfieHashMismatch');
+        case 'REPLAYED_NONCE':
+          return t('errReplayedNonce');
         case 'ROTATION_FAILED':
           return detail || t('errRotationFailed');
         case 'SELFIE_FETCH_FAILED':
@@ -276,6 +283,19 @@ export function TeacherScanPage() {
         }
       },
       classStudentIds: classDoc?.studentIds,
+      hasAndMarkNonce: (sid, nce) => {
+        const now = Date.now();
+        // Prune nonces older than 4 minutes
+        for (const [k, ts] of seenNoncesRef.current) {
+          if (now - ts > 240_000) seenNoncesRef.current.delete(k);
+        }
+        const key = `${sid}__${nce}`;
+        if (seenNoncesRef.current.has(key)) {
+          return true;
+        }
+        seenNoncesRef.current.set(key, now);
+        return false;
+      },
     };
   }, [studentMap, selfieUrls, classDoc?.studentIds]);
 
