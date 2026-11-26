@@ -49,7 +49,7 @@ export function StudentRegisterPage() {
   const requireOnlineTurnstile =
     typeof navigator !== 'undefined' &&
     navigator.onLine &&
-    Boolean(CONFIG.TURNSTILE_SITE_KEY);
+    CONFIG.TURNSTILE_ENABLED;
 
   useEffect(() => {
     void (async () => {
@@ -77,7 +77,7 @@ export function StudentRegisterPage() {
       setError(t('errMissingSelfie'));
       return;
     }
-    if (navigator.onLine && CONFIG.TURNSTILE_SITE_KEY && !turnstileToken) {
+    if (navigator.onLine && CONFIG.TURNSTILE_ENABLED && !turnstileToken) {
       setError(t('errTurnstileRequired'));
       return;
     }
@@ -89,7 +89,7 @@ export function StudentRegisterPage() {
         throw new LocalizedError('errExistingKey');
       }
 
-      if (navigator.onLine && CONFIG.TURNSTILE_SITE_KEY && turnstileToken) {
+      if (navigator.onLine && CONFIG.TURNSTILE_ENABLED && turnstileToken) {
         await verifyOnlineTurnstile(turnstileToken, 'student_register');
       }
 

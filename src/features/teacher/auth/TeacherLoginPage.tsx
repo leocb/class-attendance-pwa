@@ -30,7 +30,7 @@ export function TeacherLoginPage() {
   }, [isTeacher, navigate]);
 
   const supported = isPasskeySupported();
-  const turnstileEnabled = Boolean(CONFIG.TURNSTILE_SITE_KEY) && isOnline;
+  const turnstileEnabled = CONFIG.TURNSTILE_ENABLED && isOnline;
   const gateOpen = !turnstileEnabled || Boolean(turnstileToken);
 
   const handleLogin = async () => {

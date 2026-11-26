@@ -38,6 +38,8 @@ npm run build
 npm --prefix functions run build
 ```
 
+**Bot check on localhost:** the Turnstile gate is automatically disabled when the app runs on `localhost`/`127.0.0.1` (the production sitekey is not valid there), and `verifyTurnstileToken` skips verification when `FUNCTIONS_EMULATOR=true`. Deployed environments still verify every token.
+
 ## Initial Environment Setup (Reference)
 
 1. **Firebase Console (`classroom-attendance-a03af`)**:

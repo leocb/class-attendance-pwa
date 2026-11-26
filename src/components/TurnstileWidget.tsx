@@ -109,7 +109,7 @@ export function TurnstileWidget({
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    if (!CONFIG.TURNSTILE_SITE_KEY) return;
+    if (!CONFIG.TURNSTILE_ENABLED) return;
     let active = true;
     setState('loading');
 
@@ -179,7 +179,7 @@ export function TurnstileWidget({
     setReloadKey((key) => key + 1);
   }, []);
 
-  if (!CONFIG.TURNSTILE_SITE_KEY) return null;
+  if (!CONFIG.TURNSTILE_ENABLED) return null;
 
   return (
     <div className="stack-sm">

@@ -25,6 +25,12 @@ export async function verifyTurnstileToken({
   expectedAction,
   remoteIp,
 }: VerifyTurnstileParams): Promise<boolean> {
+  // Local emulator runs have no Cloudflare credentials: skip the challenge.
+  // Production always has FUNCTIONS_EMULATOR unset, so this never weakens it.
+  if (process.env.FUNCTIONS_EMULATOR === 'true') {
+    return true;
+  }
+
   const secret = process.env.TURNSTILE_SECRET?.trim();
   const expectedHostnames = getExpectedTurnstileHostnames();
 

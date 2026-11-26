@@ -41,7 +41,7 @@ export function StudentRecoverPage() {
   const requireOnlineTurnstile =
     typeof navigator !== 'undefined' &&
     navigator.onLine &&
-    Boolean(CONFIG.TURNSTILE_SITE_KEY);
+    CONFIG.TURNSTILE_ENABLED;
 
   const handleRecover = async (e: FormEvent) => {
     e.preventDefault();
@@ -57,14 +57,14 @@ export function StudentRecoverPage() {
       setError(t('errRecoverSelfie'));
       return;
     }
-    if (navigator.onLine && CONFIG.TURNSTILE_SITE_KEY && !turnstileToken) {
+    if (navigator.onLine && CONFIG.TURNSTILE_ENABLED && !turnstileToken) {
       setError(t('errTurnstileRequired'));
       return;
     }
 
     setSubmitting(true);
     try {
-      if (navigator.onLine && CONFIG.TURNSTILE_SITE_KEY && turnstileToken) {
+      if (navigator.onLine && CONFIG.TURNSTILE_ENABLED && turnstileToken) {
         await verifyOnlineTurnstile(turnstileToken, 'student_recover');
       }
       const keyPair = await generateStudentKeyPair();
