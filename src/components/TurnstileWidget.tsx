@@ -79,7 +79,12 @@ function resetTurnstileScript(): void {
 type TurnstileState = 'loading' | 'interactive' | 'solved' | 'error';
 
 interface TurnstileWidgetProps {
-  action: 'teacher_login' | 'teacher_register' | 'student_register' | 'student_recover';
+  action:
+    | 'teacher_auth'
+    | 'teacher_login'
+    | 'teacher_register'
+    | 'student_register'
+    | 'student_recover';
   onToken: (token: string | null) => void;
   resetTrigger: number;
 }

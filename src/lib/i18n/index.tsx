@@ -138,6 +138,8 @@ const en = {
   createAccountPasskey: 'Create account with Passkey',
   turnstileError: 'Bot check could not complete.',
   turnstileRetry: 'Retry',
+  securityCheckTitle: 'Security check',
+  securityCheckBody: 'Confirm you are human to continue.',
 
   // Teacher Classes
   yourClasses: 'Your Classes',
@@ -361,6 +363,8 @@ const ptBR: Record<TranslationKey, string> = {
   createAccountPasskey: 'Criar conta com Passkey',
   turnstileError: 'Não foi possível concluir a verificação anti-robô.',
   turnstileRetry: 'Tentar novamente',
+  securityCheckTitle: 'Verificação de segurança',
+  securityCheckBody: 'Confirme que você é humano para continuar.',
 
   // Teacher Classes
   yourClasses: 'Suas Turmas',

@@ -92,7 +92,7 @@ export const passkeyAuth = onRequest(
           req.body?.['cf-turnstile-response'] ?? req.body?.turnstileToken;
         const turnstileOk = await verifyTurnstileToken({
           token: turnstileToken,
-          expectedAction: 'teacher_register',
+          expectedAction: ['teacher_auth', 'teacher_login', 'teacher_register'],
           remoteIp,
         });
         if (!turnstileOk) {
@@ -203,7 +203,7 @@ export const passkeyAuth = onRequest(
           req.body?.['cf-turnstile-response'] ?? req.body?.turnstileToken;
         const turnstileOk = await verifyTurnstileToken({
           token: turnstileToken,
-          expectedAction: 'teacher_login',
+          expectedAction: ['teacher_auth', 'teacher_login', 'teacher_register'],
           remoteIp,
         });
         if (!turnstileOk) {

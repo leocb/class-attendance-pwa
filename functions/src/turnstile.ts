@@ -2,7 +2,8 @@ import { onRequest } from 'firebase-functions/v2/https';
 
 export interface VerifyTurnstileParams {
   token: unknown;
-  expectedAction: string;
+  /** Accepted action value(s); teacher flows share a single `teacher_auth` action. */
+  expectedAction: string | string[];
   remoteIp?: string;
 }
 
@@ -70,9 +71,14 @@ export async function verifyTurnstileToken({
     return false;
   }
 
+  const acceptedActions = Array.isArray(expectedAction)
+    ? expectedAction
+    : [expectedAction];
+
   return (
     result.success === true &&
-    result.action === expectedAction &&
+    typeof result.action === 'string' &&
+    acceptedActions.includes(result.action) &&
     typeof result.hostname === 'string' &&
     expectedHostnames.has(result.hostname)
   );
