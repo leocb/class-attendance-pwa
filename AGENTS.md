@@ -35,6 +35,8 @@ Always consult [README.md](README.md) (**Updating & Redeploying**) before modify
   - Do not introduce `sessions` or `keyRotationRequests` collections or manual "add student by ID" UI.
   - Keep `functions/.env` (`WEBAUTHN_RP_ID`, `WEBAUTHN_ORIGIN`, `TURNSTILE_SECRET`, `TURNSTILE_HOSTNAMES`) and `.env` gitignored.
 - **Bot Protection**: Teacher passkey login/registration and online student registration/recovery use Cloudflare Turnstile (`TurnstileWidget` + server-side `verifyTurnstileToken` checking `success`, `action`, and `TURNSTILE_HOSTNAMES`).
+- **Dev test login**: `passkeyAuth` exposes `/api/passkey/dev/login` only when `DEV_LOGIN_SECRET` is set (404 otherwise) and only for the fixed `DEV_LOGIN_UID`. The Vite dev middleware brokers it; the button renders solely in `vite dev` on localhost. Remove `DEV_LOGIN_SECRET`/`DEV_LOGIN_UID` from `functions/.env` and `.env.local`, then redeploy, before launch.
+
 
 ## Localization (Non-Negotiable)
 

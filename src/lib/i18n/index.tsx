@@ -140,6 +140,7 @@ const en = {
   turnstileRetry: 'Retry',
   securityCheckTitle: 'Security check',
   securityCheckBody: 'Confirm you are human to continue.',
+  devTestLogin: 'Dev test login',
 
   // Teacher Classes
   yourClasses: 'Your Classes',
@@ -365,6 +366,7 @@ const ptBR: Record<TranslationKey, string> = {
   turnstileRetry: 'Tentar novamente',
   securityCheckTitle: 'Verificação de segurança',
   securityCheckBody: 'Confirme que você é humano para continuar.',
+  devTestLogin: 'Login de teste (dev)',
 
   // Teacher Classes
   yourClasses: 'Suas Turmas',

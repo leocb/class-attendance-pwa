@@ -87,6 +87,39 @@ export const passkeyAuth = onRequest(
     const remoteIp = getClientIp(req);
 
     try {
+      // Local-dev only: mint a test teacher session without WebAuthn. Disabled
+      // unless DEV_LOGIN_SECRET is configured on the function; the fixed UID
+      // comes from DEV_LOGIN_UID (default "teacher_dev_test").
+      if (path === '/dev/login') {
+        const expected = process.env.DEV_LOGIN_SECRET?.trim();
+        const provided =
+          typeof req.headers['x-dev-login-secret'] === 'string'
+            ? req.headers['x-dev-login-secret']
+            : '';
+        const secretOk =
+          Boolean(expected) &&
+          provided.length === expected!.length &&
+          crypto.timingSafeEqual(
+            Buffer.from(provided),
+            Buffer.from(expected!)
+          );
+        if (!secretOk) {
+          res.status(404).json({ error: 'Not found' });
+          return;
+        }
+
+        const uid = (process.env.DEV_LOGIN_UID || 'teacher_dev_test').trim();
+        try {
+          await auth.getUser(uid);
+        } catch {
+          await auth.createUser({ uid, displayName: 'Dev Test Teacher' });
+        }
+        await auth.setCustomUserClaims(uid, { teacher: true });
+        const customToken = await auth.createCustomToken(uid, { teacher: true });
+        console.log('devLogin issued for', uid);
+        res.status(200).json({ customToken, uid });
+        return;
+      }
       if (path === '/register/options') {
         const turnstileToken =
           req.body?.['cf-turnstile-response'] ?? req.body?.turnstileToken;

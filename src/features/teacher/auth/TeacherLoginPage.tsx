@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { signInWithCustomToken } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import { Fingerprint, KeyRound, ShieldCheck, UserPlus } from 'lucide-react';
+import { Beaker, Fingerprint, KeyRound, ShieldCheck, UserPlus } from 'lucide-react';
 import { useApp } from '../../../app/AppProvider';
 import { TurnstileWidget } from '../../../components/TurnstileWidget';
-import { CONFIG } from '../../../lib/config';
+import { CONFIG, IS_LOCAL_DEV } from '../../../lib/config';
+import { auth } from '../../../lib/firebase/client';
 import { errorMessage } from '../../../lib/errors';
 import {
   isPasskeySupported,
@@ -30,6 +32,8 @@ export function TeacherLoginPage() {
   }, [isTeacher, navigate]);
 
   const supported = isPasskeySupported();
+  // Local dev only: log in as a fixed test teacher without a passkey.
+  const showDevLogin = import.meta.env.DEV && IS_LOCAL_DEV;
   const turnstileEnabled = CONFIG.TURNSTILE_ENABLED && isOnline;
   const gateOpen = !turnstileEnabled || Boolean(turnstileToken);
 
@@ -47,6 +51,27 @@ export function TeacherLoginPage() {
       setError(errorMessage(err, t, 'errPasskeyLoginFailed'));
       // Tokens are single-use: drop it so the page re-gates with a fresh check.
       setTurnstileToken(null);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDevLogin = async () => {
+    setError(null);
+    setBusy('login');
+    try {
+      const res = await fetch('/__dev/login', { method: 'POST' });
+      const payload = (await res.json().catch(() => ({}))) as {
+        customToken?: unknown;
+      };
+      if (!res.ok || typeof payload.customToken !== 'string') {
+        throw new Error('dev login failed');
+      }
+      const cred = await signInWithCustomToken(auth, payload.customToken);
+      await cred.user.getIdToken(true);
+      navigate('/teacher/classes', { replace: true });
+    } catch (err) {
+      setError(errorMessage(err, t, 'errPasskeyLoginFailed'));
     } finally {
       setBusy(null);
     }
@@ -125,6 +150,18 @@ export function TeacherLoginPage() {
           <KeyRound size={18} />
           {busy === 'login' ? t('waitingPasskey') : t('signInPasskey')}
         </button>
+
+        {showDevLogin && (
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={busy !== null}
+            onClick={handleDevLogin}
+          >
+            <Beaker size={16} />
+            {t('devTestLogin')}
+          </button>
+        )}
       </div>
 
       <div className="card stack-md">

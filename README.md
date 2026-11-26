@@ -40,6 +40,26 @@ npm --prefix functions run build
 
 **Bot check on localhost:** the Turnstile gate is automatically disabled when the app runs on `localhost`/`127.0.0.1` (the production sitekey is not valid there), and `verifyTurnstileToken` skips verification when `FUNCTIONS_EMULATOR=true`. Deployed environments still verify every token.
 
+### Dev test login (localhost only)
+
+`npm run dev` → `http://localhost:5173/teacher/login` shows a **Dev test login** button that signs in as a fixed test teacher without a passkey:
+
+```bash
+# Generate a secret once and set it in both files (both are gitignored)
+openssl rand -hex 32
+# functions/.env
+DEV_LOGIN_SECRET=<secret>
+DEV_LOGIN_UID=teacher_dev_test
+# .env.local (read by the Vite dev server only)
+DEV_LOGIN_SECRET=<secret>
+
+firebase deploy --only functions --force
+npm run dev
+```
+
+How it works: the Vite dev middleware `POST /__dev/login` calls the secret-guarded `passkeyAuth` `/api/passkey/dev/login` endpoint and returns a custom token for `DEV_LOGIN_UID`. The secret never enters the client bundle, the button only renders in `vite dev` on localhost, and production builds tree-shake the handler. The endpoint returns 404 when `DEV_LOGIN_SECRET` is unset — remove the env lines and redeploy before launch.
+
+
 ## Initial Environment Setup (Reference)
 
 1. **Firebase Console (`classroom-attendance-a03af`)**:
