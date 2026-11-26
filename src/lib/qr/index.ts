@@ -1,5 +1,6 @@
 import QRCode from 'qrcode';
 import { buildCanonicalSignString, generateNonce, signCanonicalString } from '../crypto';
+import { encodeQrPayload } from './codec';
 import { getEstimatedServerNowSec } from '../time';
 import type { QrPayload, StudentProfile } from '../../types';
 
@@ -39,7 +40,7 @@ export async function createSignedQrPayload(params: {
 
   return {
     payload,
-    serialized: JSON.stringify(payload),
+    serialized: encodeQrPayload(payload),
   };
 }
 

@@ -13,6 +13,7 @@ import {
   processScannedQr,
   type ScanPipelineDeps,
 } from '../features/teacher/scan/scanPipeline';
+import { encodeQrPayload } from '../lib/qr/codec';
 import type { Attendance, QrPayload, Student } from '../types';
 
 async function createStudentFixture(sid = 'S1001', name = 'Alice Rivera') {
@@ -211,6 +212,23 @@ describe('Teacher Scan Pipeline (Storage + Local Cache)', () => {
       student.selfieHash,
       serverSelfie
     );
+  });
+
+  it('records a scan from the packed q2 payload', async () => {
+    const { keyPair, student } = await createStudentFixture('S3003', 'Packed Student');
+    const { payload } = await signQr(student, keyPair.privateKey, 1712345678);
+
+    const { deps, studentCache, attendanceRecords } = makeMemoryDeps();
+    studentCache.set(student.schoolStudentId, student);
+
+    const res = await processScannedQr(
+      encodeQrPayload(payload),
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      deps
+    );
+
+    expect(res.status).toBe('RECORDED');
+    expect(attendanceRecords).toHaveLength(1);
   });
 
   it('accepts case differences in the student name on re-scan', async () => {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { QR_PREFIX, decodeQrPayload } from '../qr/codec';
 
 const ecPublicJwkSchema = z.object({
   kty: z.literal('EC'),
@@ -25,7 +26,12 @@ export type ValidatedQrPayload = z.infer<typeof qrPayloadSchema>;
 
 export function parseQrPayload(raw: string): ValidatedQrPayload | null {
   try {
-    const parsed = JSON.parse(raw);
+    const trimmed = raw.trim();
+    // Packed format (current) or legacy JSON emitted by older clients.
+    const parsed = trimmed.startsWith(QR_PREFIX)
+      ? decodeQrPayload(trimmed)
+      : JSON.parse(trimmed);
+    if (!parsed) return null;
     const result = qrPayloadSchema.safeParse(parsed);
     if (!result.success) return null;
     return result.data;

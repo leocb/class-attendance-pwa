@@ -30,6 +30,7 @@ Always consult [README.md](README.md) (**Updating & Redeploying**) before modify
   - Students upload selfies (512×512 WebP, ≤ 1 MB) to `selfies/{sid}/{fp}.webp`; clients can create but never read these (Cloud Functions use the Admin SDK).
   - Cloud Functions copy each verified selfie to `teacher-selfies/{teacherUid}/{sid}/{fp}.webp`; only the owning teacher can read that copy (`storage.rules`). `students.selfiePath` always points at the teacher copy.
   - QR payloads sign `sh` (SHA-256 hex of the WebP bytes) inside `v1|sid|n|ts|nce|fp|sh`; the payload always carries the student public key (`pk`) so scan-time key rotation is possible.
+  - Wire format is `q2:` + base64url of a packed binary payload (raw hashes/signature/coordinates). The parser also accepts the legacy JSON form.
   - Teacher devices download & hash-verify selfies on first scan / rotation and cache them in IndexedDB (`cache:selfies`) for offline scanning and roster views.
 - **Firestore Rules & Collections**:
   - Student records are scoped per teacher: document id `students/{teacherUid}__{sid}`. School IDs may repeat across teachers (e.g. different schools) but are unique within a teacher's roster. Classes reference students by `sid` and clients build the composite id with their own uid.
