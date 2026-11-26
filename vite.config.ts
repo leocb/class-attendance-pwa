@@ -12,6 +12,19 @@ export default defineConfig({
     hmr: devTunnelHost
       ? { host: devTunnelHost, protocol: 'wss', clientPort: 443 }
       : undefined,
+    // Mirror the production Worker routes so local flows reach Cloud Functions.
+    proxy: {
+      '/api': {
+        target: 'https://alunos.leobottaro.com',
+        changeOrigin: true,
+        secure: true,
+      },
+      '/time': {
+        target: 'https://alunos.leobottaro.com',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
   plugins: [
     react(),

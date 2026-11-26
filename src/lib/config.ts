@@ -1,15 +1,8 @@
 /** True when the app is served from a local development host. */
-const DEV_TUNNEL_HOSTNAMES = new Set(['alunos-dev.leobottaro.com']);
-
 function isLocalDevHost(): boolean {
   if (typeof window === 'undefined') return false;
   const host = window.location.hostname;
-  return (
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '::1' ||
-    DEV_TUNNEL_HOSTNAMES.has(host)
-  );
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }
 
 /**

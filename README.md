@@ -58,8 +58,11 @@ launchctl kickstart -k gui/$(id -u)/com.leocb.cloudflared.alunos-dev
 
 - Tunnel `alunos-dev` (`d566ef33-5dbc-4291-a532-ba6926f2cea2`), config `~/.cloudflared/alunos-dev.yml`, origin `http://127.0.0.1:5173`.
 - LaunchAgent `~/Library/LaunchAgents/com.leocb.cloudflared.alunos-dev.plist` starts it at login and keeps it alive.
-- The dev hostname is treated like localhost for Turnstile, so the gate stays out of the way.
-- The dev app still uses the **production** Firebase project, and `/api/passkey` is not proxied by Vite, so teacher passkey auth does not work on the dev host. Student registration/QR/recovery do work.
+- Vite proxies `/api/*` and `/time` to the production Worker, so Cloud Functions are reachable from the dev host.
+- **Passkeys work on the dev host** because `functions/.env` trusts `https://alunos-dev.leobottaro.com` (WebAuthn origin + RP ID) and the Turnstile widget allows the hostname. Localhost still skips the bot check; the dev host enforces it.
+- WebAuthn credentials are bound to their RP ID: existing production passkeys (`alunos.leobottaro.com`) cannot sign in on the dev host — create a separate teacher account there. Dev accounts and credentials are stored in the production Firebase project.
+- The dev app still uses the **production** Firebase project, so classes/scans created there are real data.
+
 
 
 ## Initial Environment Setup (Reference)
