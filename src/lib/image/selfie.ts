@@ -98,24 +98,3 @@ export async function captureSelfieFromVideo(
   const canvas = drawCenterCroppedSquare(video, width, height, CONFIG.SELFIE_SIZE_PX);
   return encodeCanvasWebP(canvas);
 }
-
-export async function encodeSelfieFromFile(file: File | Blob): Promise<EncodedSelfie> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new LocalizedError('selfieDecodeError'));
-      el.src = url;
-    });
-    const canvas = drawCenterCroppedSquare(
-      img,
-      img.naturalWidth,
-      img.naturalHeight,
-      CONFIG.SELFIE_SIZE_PX
-    );
-    return encodeCanvasWebP(canvas);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}

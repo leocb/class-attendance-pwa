@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { Camera, RefreshCw, Upload } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Camera, RefreshCw } from 'lucide-react';
 import {
   captureSelfieFromVideo,
-  encodeSelfieFromFile,
   type EncodedSelfie,
 } from '../lib/image/selfie';
 import { errorMessage } from '../lib/errors';
@@ -70,21 +69,6 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
     }
   };
 
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setCameraError(null);
-    try {
-      const encoded = await encodeSelfieFromFile(file);
-      onChange(encoded);
-      stopCamera();
-    } catch (err) {
-      setCameraError(
-        errorMessage(err, t, 'selfieDecodeError')
-      );
-    }
-  };
-
   return (
     <div className="stack-sm">
       <span className="label">{t('selfieLabel')}</span>
@@ -145,22 +129,11 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
           </div>
         </div>
       ) : (
-        <div className="row" style={{ flexWrap: 'wrap' }}>
+        <div className="row">
           <button type="button" className="btn btn-primary" onClick={startCamera}>
             <Camera size={16} />
             {t('openFrontCamera')}
           </button>
-          <label className="btn" style={{ cursor: 'pointer' }}>
-            <Upload size={16} />
-            {t('uploadPhoto')}
-            <input
-              type="file"
-              accept="image/*"
-              capture="user"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-            />
-          </label>
         </div>
       )}
 

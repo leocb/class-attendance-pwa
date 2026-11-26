@@ -14,7 +14,6 @@ import {
   Camera,
   CheckCircle2,
   ShieldAlert,
-  Upload,
   User,
 } from 'lucide-react';
 import { useApp } from '../../../app/AppProvider';
@@ -471,28 +470,6 @@ export function TeacherScanPage() {
     };
   }, [handleDecodedQr, t]);
 
-  const handleImageFileScan = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file || !workerRef.current) return;
-
-    const bitmap = await createImageBitmap(file);
-    const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(bitmap, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-    busyDecodingRef.current = true;
-    workerRef.current.postMessage({ id: Date.now(), imageData }, [
-      imageData.data.buffer,
-    ]);
-    e.target.value = '';
-  };
-
   const handleApproveRotation = async () => {
     if (!rotationModal || !user || !classId) return;
     setRotationBusy(true);
@@ -535,17 +512,6 @@ export function TeacherScanPage() {
             </span>
           </div>
         </div>
-
-        <label className="btn btn-sm" style={{ cursor: 'pointer' }}>
-          <Upload size={14} />
-          {t('scanPhoto')}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageFileScan}
-            style={{ display: 'none' }}
-          />
-        </label>
       </div>
 
       {!isOnline && (

@@ -38,6 +38,9 @@ const en = {
   signOut: 'Sign out',
   language: 'Language',
   options: 'Options',
+  theme: 'Theme',
+  light: 'Light',
+  dark: 'Dark',
   english: 'English',
   portugueseBr: 'Português (Brasil)',
 
@@ -60,11 +63,9 @@ const en = {
   capturePhoto: 'Capture Photo',
   cancel: 'Cancel',
   openFrontCamera: 'Open Front Camera',
-  uploadPhoto: 'Take / Upload Photo',
-  cameraUnavailable: 'Camera API unavailable. Please upload a photo instead.',
+  cameraUnavailable: 'Camera API unavailable in this browser.',
   cameraAccessError:
-    'Could not access front camera. Check permissions or upload a photo.',
-  selfieDecodeError: 'Failed to decode selected image.',
+    'Could not access the front camera. Check permissions and try again.',
   selfieProcessError: 'Failed to process photo.',
   capturedSelfieAlt: 'Captured student selfie',
 
@@ -174,7 +175,6 @@ const en = {
   scanAttendanceTitle: 'Scan Attendance',
   sessionDate: 'Session date',
   presentCount: 'present',
-  scanPhoto: 'Scan Photo',
   offlineScanBanner:
     'Offline mode active: returning students verify and queue locally. First scans and key rotations require internet.',
   alreadyRecordedToday: 'Already recorded today',
@@ -182,7 +182,7 @@ const en = {
     'Selfie hash differs from stored record. Verify student’s face visually.',
   startingCamera: 'Starting camera…',
   cameraScanErr:
-    'Unable to access rear camera. Grant camera permissions or upload a QR image.',
+    'Unable to access the rear camera. Grant camera permissions and try again.',
   scanInstruction: 'Point the camera at the student’s live rotating QR code.',
   presentToday: 'Present Today',
   noStudentsScannedToday: 'No students scanned yet today.',
@@ -271,6 +271,9 @@ const ptBR: Record<TranslationKey, string> = {
   signOut: 'Sair',
   language: 'Idioma',
   options: 'Opções',
+  theme: 'Tema',
+  light: 'Claro',
+  dark: 'Escuro',
   english: 'English',
   portugueseBr: 'Português (Brasil)',
 
@@ -293,11 +296,9 @@ const ptBR: Record<TranslationKey, string> = {
   capturePhoto: 'Capturar Foto',
   cancel: 'Cancelar',
   openFrontCamera: 'Abrir Câmera Frontal',
-  uploadPhoto: 'Tirar / Enviar Foto',
-  cameraUnavailable: 'API de câmera indisponível. Envie uma foto no lugar.',
+  cameraUnavailable: 'API de câmera indisponível neste navegador.',
   cameraAccessError:
-    'Não foi possível acessar a câmera frontal. Verifique as permissões ou envie uma foto.',
-  selfieDecodeError: 'Não foi possível decodificar a imagem selecionada.',
+    'Não foi possível acessar a câmera frontal. Verifique as permissões e tente novamente.',
   selfieProcessError: 'Falha ao processar a foto.',
   capturedSelfieAlt: 'Selfie capturada do aluno',
 
@@ -407,7 +408,6 @@ const ptBR: Record<TranslationKey, string> = {
   scanAttendanceTitle: 'Fazer Chamada',
   sessionDate: 'Data da aula',
   presentCount: 'presentes',
-  scanPhoto: 'Ler Foto',
   offlineScanBanner:
     'Modo offline ativo: alunos já conhecidos são validados e salvos localmente. Primeiras leituras e trocas de chave exigem internet.',
   alreadyRecordedToday: 'Já registrado hoje',
@@ -415,7 +415,7 @@ const ptBR: Record<TranslationKey, string> = {
     'O hash da foto difere do registro salvo. Confirme o rosto do aluno visualmente.',
   startingCamera: 'Iniciando câmera…',
   cameraScanErr:
-    'Não foi possível acessar a câmera traseira. Conceda permissão ou envie uma foto do QR.',
+    'Não foi possível acessar a câmera traseira. Conceda permissão e tente novamente.',
   scanInstruction: 'Aponte a câmera para o QR code ao vivo do aluno.',
   presentToday: 'Presentes Hoje',
   noStudentsScannedToday: 'Nenhum aluno lido hoje ainda.',

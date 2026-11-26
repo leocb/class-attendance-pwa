@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Fingerprint, GraduationCap, KeyRound, QrCode, UserCheck } from 'lucide-react';
+import {
+  Fingerprint,
+  GraduationCap,
+  KeyRound,
+  Moon,
+  QrCode,
+  Sun,
+  UserCheck,
+} from 'lucide-react';
 import { useApp } from './AppProvider';
 import { getStudentProfile } from '../lib/idb';
 import { useI18n } from '../lib/i18n';
+import { applyTheme, resolveTheme, type Theme } from '../lib/theme';
 import type { StudentProfile } from '../types';
 
 export function HomePage() {
@@ -13,6 +22,12 @@ export function HomePage() {
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(
     null
   );
+  const [theme, setThemeState] = useState<Theme>(() => resolveTheme());
+
+  const chooseTheme = (next: Theme) => {
+    setThemeState(next);
+    applyTheme(next, true);
+  };
 
   useEffect(() => {
     let active = true;
@@ -93,6 +108,33 @@ export function HomePage() {
               </Link>
             )}
           </div>
+        </div>
+      </div>
+
+      <div
+        className="card row-between"
+        style={{ flexWrap: 'wrap', gap: '0.75rem' }}
+      >
+        <strong>{t('theme')}</strong>
+        <div className="row" style={{ gap: '0.4rem' }}>
+          <button
+            type="button"
+            className={`btn btn-sm ${theme === 'light' ? 'btn-primary' : ''}`}
+            aria-pressed={theme === 'light'}
+            onClick={() => chooseTheme('light')}
+          >
+            <Sun size={14} />
+            {t('light')}
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${theme === 'dark' ? 'btn-primary' : ''}`}
+            aria-pressed={theme === 'dark'}
+            onClick={() => chooseTheme('dark')}
+          >
+            <Moon size={14} />
+            {t('dark')}
+          </button>
         </div>
       </div>
 
