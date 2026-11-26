@@ -142,6 +142,21 @@ export const registerFirstScan = onCall(async (request) => {
 
   if (txResult.status === 'ROTATION_REQUIRED') {
     let rotationSelfieDataUrl: string | undefined;
+    let storedSelfieDataUrl: string | undefined;
+
+    // The scanning teacher is not authorized to read the old selfie yet, so the
+    // Admin SDK fetches it for the side-by-side comparison in the rotation modal.
+    try {
+      const stored = await downloadAndVerifySelfieFromStorage(
+        qrPayload.sid,
+        txResult.student.keyFingerprint,
+        txResult.student.selfieHash
+      );
+      storedSelfieDataUrl = stored.dataUrl;
+    } catch {
+      storedSelfieDataUrl = undefined;
+    }
+
     if (qrPayload.pk) {
       if (computeFingerprintFromJwk(qrPayload.pk) !== qrPayload.fp) {
         throw new HttpsError(
@@ -166,6 +181,7 @@ export const registerFirstScan = onCall(async (request) => {
     return {
       ...txResult,
       rotationSelfieDataUrl,
+      storedSelfieDataUrl,
     };
   }
 

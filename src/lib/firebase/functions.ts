@@ -8,6 +8,7 @@ export interface RegisterFirstScanResponse {
   /** Server-verified selfie (already downloaded/hashed by the Cloud Function). */
   selfieDataUrl?: string;
   rotationSelfieDataUrl?: string;
+  storedSelfieDataUrl?: string;
 }
 
 export interface ApproveRotationResponse {

@@ -9,7 +9,7 @@ Production-ready, offline-first Progressive Web App for classroom attendance usi
 
 - **Frontend (`src/`)**: React 19 + TypeScript + Vite + `vite-plugin-pwa` (Workbox precaching for app shell, Firebase SDK, `exceljs`, and `/zxing_reader.wasm`).
 - **Edge Hosting & Proxy (`worker/index.ts`, `wrangler.jsonc`)**: Cloudflare Worker serving static SPA assets and proxying `/time`, `/api/time`, and `/api/passkey/*` same-origin to Firebase Cloud Functions in `southamerica-east1`.
-- **Cryptography (`src/lib/crypto`)**: Non-extractable **ECDSA P-256** student keys stored directly as `CryptoKey` objects in IndexedDB (`idb`). Compact QR codes rotate every 30s and carry an ECDSA signature over `v1|sid|n|ts|nce|fp|sh`.
+- **Cryptography (`src/lib/crypto`)**: Non-extractable **ECDSA P-256** student keys stored directly as `CryptoKey` objects in IndexedDB (`idb`). Compact QR codes rotate every 30s and carry an ECDSA signature over `v1|sid|n|ts|nce|fp|sh` plus the public key (`pk`) so a scan can authorize a key rotation.
 - **Selfie Storage (`src/lib/image/selfie.ts`, `storage.rules`)**: Student selfies are center-cropped to **512×512 WebP** (≤ 1 MB) and uploaded to Firebase Storage (`selfies/{sid}/{fp}.webp`). Teacher devices download, SHA-256 verify, and cache them locally in IndexedDB (`cache:selfies`) on first scan or key rotation so all subsequent scans work offline.
 - **Time Synchronization (`src/lib/time`, `getServerTime`)**: Estimates server time offset via `GET /time` so device clock drift does not break the 180-second freshness window.
 - **Auth**:

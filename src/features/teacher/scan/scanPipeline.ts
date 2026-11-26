@@ -43,6 +43,7 @@ export interface ScanPipelineDeps {
     student: Student;
     selfieDataUrl?: string;
     rotationSelfieDataUrl?: string;
+    storedSelfieDataUrl?: string;
   }>;
   getRotationSelfie: (
     qr: QrPayload,
@@ -122,7 +123,9 @@ export async function processScannedQr(
     try {
       const res = await deps.registerFirstScan(qr, params.classId);
       if (res.status === 'ROTATION_REQUIRED') {
-        const storedSelfieDataUrl = await deps.ensureStudentSelfieCached(res.student);
+        const storedSelfieDataUrl =
+          res.storedSelfieDataUrl ??
+          (await deps.ensureStudentSelfieCached(res.student));
         let newSelfieDataUrl = res.rotationSelfieDataUrl ?? null;
         if (!newSelfieDataUrl && qr.pk) {
           const fetched = await deps.getRotationSelfie(qr, params.classId);

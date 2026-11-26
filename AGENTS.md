@@ -28,7 +28,7 @@ Always consult [README.md](README.md) (**Updating & Redeploying**) before modify
 - **Student Auth & Crypto**: Anonymous auth (`signInAnonymously`) at registration only; non-extractable ECDSA P-256 keys (`extractable: false`) stored as `CryptoKey` in IndexedDB (`student-private-key`). Never allow client registration to overwrite an existing key outside `/student/recover`.
 - **Selfie Storage & Compact QR**:
   - Student selfies (512×512 WebP, ≤ 1 MB) live in Firebase Storage at `selfies/{sid}/{fp}.webp` (`storage.rules`), NOT inside the QR payload.
-  - QR payloads sign `sh` (SHA-256 hex of the WebP bytes) inside `v1|sid|n|ts|nce|fp|sh`.
+  - QR payloads sign `sh` (SHA-256 hex of the WebP bytes) inside `v1|sid|n|ts|nce|fp|sh`; the payload always carries the student public key (`pk`) so scan-time key rotation is possible.
   - Teacher devices download & hash-verify selfies on first scan / rotation and cache them in IndexedDB (`cache:selfies`) for offline scanning and roster views.
 - **Firestore Rules & Collections**:
   - Never allow client-side `update`/`delete` on `students` or `classes`, and never allow `list` on `students`.
