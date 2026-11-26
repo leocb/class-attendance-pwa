@@ -812,9 +812,6 @@ export function TeacherScanPage() {
                 ) : (
                   <div className="avatar-lg" />
                 )}
-                <span className="mono muted" style={{ fontSize: '0.75rem' }}>
-                  {t('oldFp')}: {rotationModal.storedStudent.keyFingerprint}
-                </span>
               </div>
 
               <div className="stack-sm" style={{ alignItems: 'center' }}>
@@ -850,9 +847,6 @@ export function TeacherScanPage() {
                 ) : (
                   <div className="avatar-lg" />
                 )}
-                <span className="mono muted" style={{ fontSize: '0.75rem' }}>
-                  {t('newFp')}: {rotationModal.qr.fp}
-                </span>
               </div>
             </div>
 
