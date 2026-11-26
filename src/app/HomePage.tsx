@@ -3,7 +3,6 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import {
   Fingerprint,
   GraduationCap,
-  KeyRound,
   Moon,
   QrCode,
   Sun,
@@ -83,12 +82,6 @@ export function HomePage() {
               <Link to="/student/register" className="btn btn-primary">
                 <UserCheck size={16} />
                 {t('studentRegistration')}
-              </Link>
-            )}
-            {studentProfile && (
-              <Link to="/student/recover" className="btn">
-                <KeyRound size={16} />
-                {t('lostPhoneRecover')}
               </Link>
             )}
           </div>

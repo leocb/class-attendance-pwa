@@ -414,7 +414,7 @@ export function TeacherScanPage() {
         return;
       }
       try {
-        const stream = await openCameraStream('environment');
+        const stream = await openCameraStream('environment', 1920);
         if (!active) {
           stream.getTracks().forEach((tTrack) => tTrack.stop());
           return;
@@ -460,7 +460,7 @@ export function TeacherScanPage() {
         canvasRef.current = canvas;
       }
 
-      const maxDim = 720;
+      const maxDim = 1280;
       const scale = Math.min(
         1,
         maxDim / Math.max(video.videoWidth, video.videoHeight)

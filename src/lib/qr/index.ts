@@ -50,8 +50,8 @@ export async function renderQrToCanvas(
 ): Promise<void> {
   await QRCode.toCanvas(canvas, text, {
     errorCorrectionLevel: 'M',
-    margin: 2,
-    width: 360,
+    margin: 4,
+    width: 440,
     color: {
       dark: '#0f172a',
       light: '#ffffff',

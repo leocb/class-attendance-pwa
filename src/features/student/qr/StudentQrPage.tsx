@@ -190,7 +190,7 @@ export function StudentQrPage() {
         <canvas
           ref={canvasRef}
           aria-label={t('qrAriaLabel')}
-          style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
+          style={{ display: 'block', width: '100%', maxWidth: 440, height: 'auto' }}
         />
       </div>
 

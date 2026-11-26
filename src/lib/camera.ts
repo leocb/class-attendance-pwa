@@ -17,6 +17,11 @@ export async function openCameraStream(
         facingMode: { ideal: facingMode },
         width: { ideal: idealSize },
         height: { ideal: idealSize },
+        // Best-effort autofocus for close-up QR scanning; ignored by devices
+        // that do not expose focusMode.
+        advanced: [
+          { focusMode: 'continuous' } as unknown as MediaTrackConstraintSet,
+        ],
       },
       audio: false,
     },
