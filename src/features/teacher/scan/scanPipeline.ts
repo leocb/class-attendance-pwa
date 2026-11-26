@@ -40,6 +40,7 @@ export interface ScanPipelineDeps {
   ) => Promise<{
     status: 'REGISTERED' | 'ROTATION_REQUIRED';
     student: Student;
+    selfieDataUrl?: string;
     rotationSelfieDataUrl?: string;
   }>;
   getRotationSelfie: (
@@ -110,6 +111,7 @@ export async function processScannedQr(
   // 2. Look up student in local cache by sid
   let student = await deps.getCachedStudent(qr.sid);
   let firstScan = false;
+  let firstScanSelfieDataUrl: string | null = null;
 
   if (!student) {
     if (!deps.isOnline()) {
@@ -136,6 +138,18 @@ export async function processScannedQr(
       student = res.student;
       firstScan = true;
       await deps.putCachedStudent(student);
+
+      // The Cloud Function already downloaded and hash-verified the selfie, so
+      // cache it directly instead of racing a second Storage download.
+      if (res.selfieDataUrl) {
+        await deps.cacheSelfieDataUrl(
+          student.schoolStudentId,
+          student.keyFingerprint,
+          student.selfieHash,
+          res.selfieDataUrl
+        );
+        firstScanSelfieDataUrl = res.selfieDataUrl;
+      }
     } catch (err) {
       return {
         status: 'REJECTED',
@@ -225,7 +239,8 @@ export async function processScannedQr(
   const selfieWarning = qr.sh !== student.selfieHash;
 
   // 7. Ensure selfie is cached locally in IDB (downloaded once from Firebase Storage)
-  const selfieDataUrl = await deps.ensureStudentSelfieCached(student);
+  const selfieDataUrl =
+    firstScanSelfieDataUrl ?? (await deps.ensureStudentSelfieCached(student));
 
   return recordAttendanceForStudent(student, qr, params, deps, {
     selfieDataUrl,

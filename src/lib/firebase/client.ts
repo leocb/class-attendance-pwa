@@ -1,4 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
 import {
   initializeFirestore,
@@ -36,6 +37,20 @@ let storageInstance: FirebaseStorage;
 
 if (getApps().length === 0) {
   appInstance = initializeApp(firebaseConfig);
+
+  // Opt-in Firebase App Check (reCAPTCHA v3). Enable by setting
+  // VITE_APP_CHECK_SITE_KEY after registering the web app in
+  // Firebase Console → App Check. Enforcement stays a console-side switch.
+  const appCheckSiteKey = import.meta.env.VITE_APP_CHECK_SITE_KEY as
+    | string
+    | undefined;
+  if (appCheckSiteKey) {
+    initializeAppCheck(appInstance, {
+      provider: new ReCaptchaV3Provider(appCheckSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    });
+  }
+
   firestoreInstance = initializeFirestore(appInstance, {
     localCache: persistentLocalCache({
       tabManager: persistentMultipleTabManager(),

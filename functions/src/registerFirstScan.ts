@@ -108,7 +108,9 @@ export const registerFirstScan = onCall(async (request) => {
     }
 
     // Verify selfie exists in Storage and matches the signed SHA-256 hash
-    await downloadAndVerifySelfieFromStorage(
+    // We download it here (admin SDK bypasses Storage rules) so the teacher
+    // client can display it immediately without a second download race.
+    const verified = await downloadAndVerifySelfieFromStorage(
       qrPayload.sid,
       qrPayload.fp,
       qrPayload.sh
@@ -129,6 +131,7 @@ export const registerFirstScan = onCall(async (request) => {
 
     return {
       status: 'REGISTERED' as const,
+      selfieDataUrl: verified.dataUrl,
       student: {
         ...student,
         authorizedTeacherUids,

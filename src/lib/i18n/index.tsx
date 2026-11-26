@@ -144,6 +144,8 @@ const en = {
   teacherDisplayNamePlaceholder: 'e.g. Prof. Rivera',
   creatingPasskey: 'Creating Passkey Account…',
   createAccountPasskey: 'Create account with Passkey',
+  turnstileError: 'Bot check could not complete.',
+  turnstileRetry: 'Retry',
 
   // Teacher Classes
   yourClasses: 'Your Classes',
@@ -357,6 +359,8 @@ const ptBR: Record<TranslationKey, string> = {
   teacherDisplayNamePlaceholder: 'ex.: Prof. Bottaro',
   creatingPasskey: 'Criando Conta com Passkey…',
   createAccountPasskey: 'Criar conta com Passkey',
+  turnstileError: 'Não foi possível concluir a verificação anti-robô.',
+  turnstileRetry: 'Tentar novamente',
 
   // Teacher Classes
   yourClasses: 'Suas Turmas',

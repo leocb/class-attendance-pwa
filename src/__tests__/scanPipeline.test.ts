@@ -174,6 +174,45 @@ describe('Teacher Scan Pipeline (Storage + Local Cache)', () => {
     expect(await online.deps.getCachedStudent('S1001')).toBeDefined();
   });
 
+  it('uses the server-verified selfie returned by the first-scan callable', async () => {
+    const { keyPair, student } = await createStudentFixture();
+    const { raw } = await signQr(student, keyPair.privateKey, 1712345678);
+
+    const ensureSelfie = vi.fn(
+      async () => 'data:image/webp;base64,from_storage'
+    );
+    const cacheSelfie = vi.fn(async () => {});
+    const serverSelfie = 'data:image/webp;base64,from_server';
+
+    const { deps } = makeMemoryDeps({
+      registerFirstScan: vi.fn(async () => ({
+        status: 'REGISTERED' as const,
+        student: { ...student, authorizedTeacherUids: ['teacher-1'] },
+        selfieDataUrl: serverSelfie,
+      })),
+      ensureStudentSelfieCached: ensureSelfie,
+      cacheSelfieDataUrl: cacheSelfie,
+    });
+
+    const res = await processScannedQr(
+      raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      deps
+    );
+
+    expect(res.status).toBe('RECORDED');
+    if (res.status === 'RECORDED') {
+      expect(res.selfieDataUrl).toBe(serverSelfie);
+    }
+    expect(ensureSelfie).not.toHaveBeenCalled();
+    expect(cacheSelfie).toHaveBeenCalledWith(
+      student.schoolStudentId,
+      student.keyFingerprint,
+      student.selfieHash,
+      serverSelfie
+    );
+  });
+
   it('verifies subsequent scans fully offline and ignores duplicate same-day scans', async () => {
     const { keyPair, student } = await createStudentFixture();
     const { raw } = await signQr(student, keyPair.privateKey, 1712345678);

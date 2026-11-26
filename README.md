@@ -128,3 +128,20 @@ curl -sS -X POST https://alunos.leobottaro.com/api/passkey/login/options \
 ```
 
 > **HTTPS Requirement**: WebAuthn passkeys, `getUserMedia` camera access, and WebCrypto require HTTPS (automatically provided by Cloudflare for `alunos.leobottaro.com`; `localhost` also works for local development).
+
+### 5. Optional Hardening: Firestore TTL & App Check
+
+Both are opt-in and configured outside the code deployment:
+
+1. **TTL on `webauthn_challenges.expireAt`** (removes stale WebAuthn challenges automatically). There is no CLI command for TTL policies:
+   - Firebase Console → Firestore Database → **Indexes** → **TTL policies** → **Create policy**
+   - Collection group: `webauthn_challenges`, timestamp field: `expireAt`
+   - The field is already written by `passkeyAuth`; no redeploy is required.
+
+2. **Firebase App Check (reCAPTCHA v3)** — client support is built in but inert until you provide a site key:
+   - Firebase Console → **App Check** → register the web app with **reCAPTCHA v3** (create the reCAPTCHA keys in the Google Cloud console first).
+   - Add the public site key to `.env` as `VITE_APP_CHECK_SITE_KEY=...` and rebuild/redeploy Cloudflare (`npm run deploy:cf`).
+   - For local development, App Check needs a debug token: set `self.FIREBASE_APPCHECK_DEBUG_TOKEN = true` before the app bundle loads, then register the printed token under App Check → Apps → Manage debug tokens.
+   - Only enable **enforcement** for Firestore/Storage/Functions after every deployed client sends valid App Check tokens, otherwise older clients will be blocked.
+
+

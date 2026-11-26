@@ -5,6 +5,8 @@ import type { QrPayload, Student } from '../../types';
 export interface RegisterFirstScanResponse {
   status: 'REGISTERED' | 'ROTATION_REQUIRED';
   student: Student;
+  /** Server-verified selfie (already downloaded/hashed by the Cloud Function). */
+  selfieDataUrl?: string;
   rotationSelfieDataUrl?: string;
 }
 
