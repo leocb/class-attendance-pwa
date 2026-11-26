@@ -10,13 +10,8 @@ export interface Student {
   deviceUid: string;
   publicKeyJwk: JsonWebKey;
   keyFingerprint: string;
-  selfiePath?: string; // Firebase Storage path: selfies/{sid}/{fp}.webp (absent on legacy records)
-  selfieHash: string; // hex SHA-256 of WebP bytes (legacy records: SHA-256 of the base64 string)
-  /**
-   * Legacy v2 records kept the signed selfie inline as a base64 WebP string.
-   * Used only as a hash-verified fallback when Storage has no object for the student.
-   */
-  selfieThumb?: string;
+  selfiePath: string; // Firebase Storage path: selfies/{sid}/{fp}.webp
+  selfieHash: string; // hex SHA-256 of WebP bytes
   registrationTimestamp: number;
   authorizedTeacherUids: string[];
   rotatedKeys: RotatedKeyEntry[];

@@ -36,6 +36,7 @@ function baseStudent(overrides: Partial<Student>): Student {
     deviceUid: 'anon-uid-1',
     publicKeyJwk: { kty: 'EC', crv: 'P-256', x: 'x', y: 'y' },
     keyFingerprint: 'ABCD2345',
+    selfiePath: 'selfies/S1001/ABCD2345.webp',
     selfieHash: '',
     registrationTimestamp: 1700000000000,
     authorizedTeacherUids: [],
@@ -54,51 +55,32 @@ describe('ensureStudentSelfieCached', () => {
     const selfieHash = await sha256Hex(WEBP_BYTES);
     getBytesMock.mockResolvedValue(WEBP_BYTES.buffer);
 
-    const url = await ensureStudentSelfieCached(
-      baseStudent({
-        selfiePath: 'selfies/S1001/ABCD2345.webp',
-        selfieHash,
-      })
-    );
+    const url = await ensureStudentSelfieCached(baseStudent({ selfieHash }));
 
     expect(getBytesMock).toHaveBeenCalledOnce();
     expect(url).toBe(`data:image/webp;base64,${WEBP_BASE64}`);
     expect(idbStore.size).toBe(1);
   });
 
-  it('falls back to a hash-verified legacy selfieThumb when Storage has no object', async () => {
-    // Legacy records signed SHA-256 of the base64 string, not of the bytes.
-    const legacyHash = await sha256Hex(new TextEncoder().encode(WEBP_BASE64));
+  it('rejects and does not cache a selfie whose hash does not match', async () => {
+    getBytesMock.mockResolvedValue(WEBP_BYTES.buffer);
 
     const url = await ensureStudentSelfieCached(
-      baseStudent({ selfieThumb: WEBP_BASE64, selfieHash: legacyHash })
-    );
-
-    expect(getBytesMock).not.toHaveBeenCalled();
-    expect(url).toBe(`data:image/webp;base64,${WEBP_BASE64}`);
-  });
-
-  it('refuses a legacy selfieThumb whose hash does not match the signed value', async () => {
-    const url = await ensureStudentSelfieCached(
-      baseStudent({ selfieThumb: WEBP_BASE64, selfieHash: 'deadbeef' })
+      baseStudent({ selfieHash: 'deadbeef' })
     );
 
     expect(url).toBeNull();
     expect(idbStore.size).toBe(0);
   });
 
-  it('uses the verified legacy thumb when the Storage download fails', async () => {
-    const legacyHash = await sha256Hex(new TextEncoder().encode(WEBP_BASE64));
+  it('returns null without caching when the Storage download fails', async () => {
     getBytesMock.mockRejectedValue(new Error('storage/unauthorized'));
 
     const url = await ensureStudentSelfieCached(
-      baseStudent({
-        selfiePath: 'selfies/S1001/ABCD2345.webp',
-        selfieThumb: WEBP_BASE64,
-        selfieHash: legacyHash,
-      })
+      baseStudent({ selfieHash: await sha256Hex(WEBP_BYTES) })
     );
 
-    expect(url).toBe(`data:image/webp;base64,${WEBP_BASE64}`);
+    expect(url).toBeNull();
+    expect(idbStore.size).toBe(0);
   });
 });
