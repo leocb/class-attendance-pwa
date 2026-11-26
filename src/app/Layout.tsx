@@ -84,7 +84,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
           {location.pathname === '/student/qr' && (
             <Link
-              to="/"
+              to="/?menu=1"
               className="btn btn-sm"
               aria-label={t('options')}
               title={t('options')}

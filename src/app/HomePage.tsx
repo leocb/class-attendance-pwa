@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import {
   Fingerprint,
   GraduationCap,
@@ -17,6 +17,8 @@ import type { StudentProfile } from '../types';
 
 export function HomePage() {
   const { isTeacher, authLoading } = useApp();
+  const [searchParams] = useSearchParams();
+  const menuRequested = searchParams.get('menu') === '1';
   const { t } = useI18n();
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(
@@ -55,9 +57,10 @@ export function HomePage() {
     );
   }
 
-  // Registered students go straight to their live QR; the QR screen exposes an
-  // options button back to this home page.
-  if (studentProfile && !isTeacher) {
+  // Registered students go straight to their live QR on app start. The options
+  // button in the navbar requests this menu explicitly (?menu=1), so it must not
+  // bounce back to the QR screen.
+  if (studentProfile && !isTeacher && !menuRequested) {
     return <Navigate to="/student/qr" replace />;
   }
 
