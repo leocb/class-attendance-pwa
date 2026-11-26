@@ -22,6 +22,12 @@ export type ScanErrorCode =
   | 'SELFIE_HASH_MISMATCH'
   | 'REPLAYED_NONCE'
   | 'ROTATION_FAILED'
+  | 'ROTATION_OLD_APP'
+  | 'ROTATION_EXPIRED'
+  | 'ROTATION_REPLAYED'
+  | 'ROTATION_NAME'
+  | 'ROTATION_SELFIE'
+  | 'ROTATION_SIGNATURE'
   | 'SELFIE_FETCH_FAILED';
 
 export interface ScanPipelineDeps {
@@ -279,10 +285,23 @@ export async function confirmKeyRotationAndRecord(
   } catch (err) {
     return {
       status: 'REJECTED',
-      code: 'ROTATION_FAILED',
+      code: classifyRotationError(err),
       detail: err instanceof Error ? err.message : undefined,
     };
   }
+}
+
+function classifyRotationError(err: unknown): ScanErrorCode {
+  const message = (err instanceof Error ? err.message : '').toLowerCase();
+  if (message.includes('public key')) return 'ROTATION_OLD_APP';
+  if (message.includes('expired')) return 'ROTATION_EXPIRED';
+  if (message.includes('replayed') || message.includes('stale')) {
+    return 'ROTATION_REPLAYED';
+  }
+  if (message.includes('name')) return 'ROTATION_NAME';
+  if (message.includes('selfie hash')) return 'ROTATION_SELFIE';
+  if (message.includes('signature')) return 'ROTATION_SIGNATURE';
+  return 'ROTATION_FAILED';
 }
 
 async function recordAttendanceForStudent(

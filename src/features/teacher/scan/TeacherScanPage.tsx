@@ -124,6 +124,18 @@ export function TeacherScanPage() {
           return t('errReplayedNonce');
         case 'ROTATION_FAILED':
           return t('errRotationFailed');
+        case 'ROTATION_OLD_APP':
+          return t('errRotationOldApp');
+        case 'ROTATION_EXPIRED':
+          return t('errRotationExpired');
+        case 'ROTATION_REPLAYED':
+          return t('errRotationReplayed');
+        case 'ROTATION_NAME':
+          return t('errRotationName');
+        case 'ROTATION_SELFIE':
+          return t('errRotationSelfie');
+        case 'ROTATION_SIGNATURE':
+          return t('errRotationSignature');
         case 'SELFIE_FETCH_FAILED':
           return t('errSelfieFetchFailed');
       }
@@ -807,6 +819,9 @@ export function TeacherScanPage() {
 
               <div className="stack-sm" style={{ alignItems: 'center' }}>
                 <span className="label">{t('newQrSelfie')}</span>
+                <span className="muted" style={{ fontSize: '0.85rem' }}>
+                  {rotationModal.qr.n}
+                </span>
                 {rotationModal.newSelfieDataUrl ? (
                   <button
                     type="button"

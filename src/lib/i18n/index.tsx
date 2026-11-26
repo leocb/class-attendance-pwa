@@ -214,6 +214,15 @@ const en = {
   errInvalidSignature: 'Invalid cryptographic signature.',
   errExpiredQr: 'QR code expired (older than 180 seconds). Ask student to show live QR.',
   errRotationFailed: 'Key rotation approval failed.',
+  errRotationOldApp:
+    'The student app is outdated. Ask the student to reload it, then scan the live QR again.',
+  errRotationExpired:
+    'This QR expired while you reviewed it. Scan the student’s live QR again.',
+  errRotationReplayed: 'This QR was already used. Scan a fresh QR.',
+  errRotationName: 'The student name on the QR does not match the record.',
+  errRotationSelfie:
+    'The new selfie does not match the QR. Ask the student to capture it again.',
+  errRotationSignature: 'The QR signature is invalid.',
   errSelfieFetchFailed: 'Could not download student selfie from Firebase Storage.',
   errNameMismatch: 'QR student name does not match registered record.',
   errSelfieHashMismatch: 'QR selfie hash does not match registered record.',
@@ -450,6 +459,15 @@ const ptBR: Record<TranslationKey, string> = {
   errInvalidSignature: 'Assinatura criptográfica inválida.',
   errExpiredQr: 'QR code expirado (mais de 180 segundos). Peça ao aluno o QR ao vivo.',
   errRotationFailed: 'Falha ao aprovar troca de chave.',
+  errRotationOldApp:
+    'O aplicativo do aluno está desatualizado. Peça para recarregar e leia o QR ao vivo novamente.',
+  errRotationExpired:
+    'Este QR expirou enquanto você revisava. Leia o QR ao vivo do aluno novamente.',
+  errRotationReplayed: 'Este QR já foi usado. Leia um QR novo.',
+  errRotationName: 'O nome no QR não confere com o registro do aluno.',
+  errRotationSelfie:
+    'A nova selfie não confere com o QR. Peça ao aluno para capturar novamente.',
+  errRotationSignature: 'A assinatura do QR é inválida.',
   errSelfieFetchFailed: 'Não foi possível baixar a foto do aluno no Firebase Storage.',
   errNameMismatch: 'O nome no QR não confere com o registro do aluno.',
   errSelfieHashMismatch: 'O hash da foto no QR não confere com o registro do aluno.',

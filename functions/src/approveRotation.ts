@@ -7,7 +7,6 @@ import {
   qrPayloadSchema,
   verifyQrSignature,
 } from './crypto';
-import { studentNamesMatch } from './names';
 import {
   downloadAndVerifySelfieFromStorage,
   storeTeacherSelfieCopy,
@@ -102,13 +101,6 @@ export const approveRotation = onCall(async (request) => {
 
     const existing = studentSnap.data()!;
 
-    if (!studentNamesMatch(qrPayload.n, existing.name)) {
-      throw new HttpsError(
-        'permission-denied',
-        'Recovery QR student name does not match registered record.'
-      );
-    }
-
     if (
       existing.lastRotationNonce === qrPayload.nce ||
       (typeof existing.lastRotationTs === 'number' &&
@@ -140,7 +132,10 @@ export const approveRotation = onCall(async (request) => {
       key_ops: ['verify'],
     };
 
+    const nextName = qrPayload.n.trim();
+
     tx.update(studentRef, {
+      name: nextName,
       publicKeyJwk: cleanNewJwk,
       keyFingerprint: qrPayload.fp,
       selfiePath: teacherSelfiePath,
@@ -156,6 +151,7 @@ export const approveRotation = onCall(async (request) => {
 
     return {
       ...existing,
+      name: nextName,
       publicKeyJwk: cleanNewJwk,
       keyFingerprint: qrPayload.fp,
       selfiePath: teacherSelfiePath,
