@@ -41,13 +41,14 @@ async function signQr(
   student: Student,
   privateKey: CryptoKey,
   ts: number,
-  options?: { sh?: string; includePk?: boolean }
+  options?: { sh?: string; includePk?: boolean; name?: string }
 ): Promise<{ payload: QrPayload; raw: string }> {
   const nce = generateNonce();
   const sh = options?.sh ?? student.selfieHash;
+  const n = options?.name ?? student.name;
   const canonical = buildCanonicalSignString({
     sid: student.schoolStudentId,
-    n: student.name,
+    n,
     ts,
     nce,
     fp: student.keyFingerprint,
@@ -57,7 +58,7 @@ async function signQr(
   const payload: QrPayload = {
     v: 1,
     sid: student.schoolStudentId,
-    n: student.name,
+    n,
     ts,
     nce,
     fp: student.keyFingerprint,
@@ -211,6 +212,25 @@ describe('Teacher Scan Pipeline (Storage + Local Cache)', () => {
       student.selfieHash,
       serverSelfie
     );
+  });
+
+  it('accepts case differences in the student name on re-scan', async () => {
+    const { keyPair, student } = await createStudentFixture('S2002', 'Leo Teste');
+    const { raw } = await signQr(student, keyPair.privateKey, 1712345678, {
+      name: 'leo teste',
+    });
+
+    const { deps, studentCache, attendanceRecords } = makeMemoryDeps();
+    studentCache.set(student.schoolStudentId, student);
+
+    const res = await processScannedQr(
+      raw,
+      { classId: 'c1', teacherUid: 'teacher-1' },
+      deps
+    );
+
+    expect(res.status).toBe('RECORDED');
+    expect(attendanceRecords).toHaveLength(1);
   });
 
   it('verifies subsequent scans fully offline and ignores duplicate same-day scans', async () => {

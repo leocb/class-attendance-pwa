@@ -7,6 +7,7 @@ import {
   qrPayloadSchema,
   verifyQrSignature,
 } from './crypto';
+import { studentNamesMatch } from './names';
 import { downloadAndVerifySelfieFromStorage } from './storageHelper';
 
 const requestSchema = z.object({
@@ -89,7 +90,7 @@ export const approveRotation = onCall(async (request) => {
 
     const existing = studentSnap.data()!;
 
-    if (qrPayload.n !== existing.name) {
+    if (!studentNamesMatch(qrPayload.n, existing.name)) {
       throw new HttpsError(
         'permission-denied',
         'Recovery QR student name does not match registered record.'

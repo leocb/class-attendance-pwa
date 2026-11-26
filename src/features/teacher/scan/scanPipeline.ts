@@ -7,6 +7,7 @@ import {
   getLocalSessionDate,
   isTimestampFresh,
 } from '../../../lib/time';
+import { studentNamesMatch } from '../../../lib/validation/names';
 import { parseQrPayload } from '../../../lib/validation/qrSchema';
 import type { Attendance, QrPayload, Student } from '../../../types';
 
@@ -211,7 +212,7 @@ export async function processScannedQr(
     }
 
     // Check name & selfie hash consistency against stored student record
-    if (qr.n !== student.name) {
+    if (!studentNamesMatch(qr.n, student.name)) {
       return { status: 'REJECTED', code: 'NAME_MISMATCH' };
     }
     if (qr.sh !== student.selfieHash) {

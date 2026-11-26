@@ -8,6 +8,7 @@ import {
   qrPayloadSchema,
   verifyQrSignature,
 } from './crypto';
+import { studentNamesMatch } from './names';
 import {
   buildSelfieStoragePath,
   downloadAndVerifySelfieFromStorage,
@@ -69,7 +70,7 @@ export const registerFirstScan = onCall(async (request) => {
 
     const student = studentSnap.data()!;
 
-    if (qrPayload.n !== student.name) {
+    if (!studentNamesMatch(qrPayload.n, student.name)) {
       throw new HttpsError(
         'permission-denied',
         'QR student name does not match registered student record.'
