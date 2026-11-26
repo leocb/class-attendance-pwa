@@ -85,10 +85,12 @@ export function HomePage() {
                 {t('studentRegistration')}
               </Link>
             )}
-            <Link to="/student/recover" className="btn">
-              <KeyRound size={16} />
-              {t('lostPhoneRecover')}
-            </Link>
+            {studentProfile && (
+              <Link to="/student/recover" className="btn">
+                <KeyRound size={16} />
+                {t('lostPhoneRecover')}
+              </Link>
+            )}
           </div>
         </div>
 

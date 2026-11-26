@@ -5,6 +5,7 @@ import {
   type EncodedSelfie,
 } from '../lib/image/selfie';
 import { errorMessage } from '../lib/errors';
+import { openCameraStream } from '../lib/camera';
 import { useI18n } from '../lib/i18n';
 
 interface SelfieCaptureProps {
@@ -16,6 +17,8 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
   const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const mountedRef = useRef(false);
+  const startingRef = useRef(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
@@ -26,33 +29,56 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
       }
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setCameraActive(false);
   };
 
   useEffect(() => {
-    return () => stopCamera();
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      stopCamera();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Attach the stream only after React has rendered the <video> element.
+  useEffect(() => {
+    if (!cameraActive) return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+    if (video.srcObject !== stream) {
+      video.srcObject = stream;
+    }
+    void video.play().catch(() => {
+      // Autoplay can be deferred by the browser; the muted inline video
+      // usually starts on the next frame.
+    });
+  }, [cameraActive]);
+
   const startCamera = async () => {
+    if (startingRef.current || streamRef.current) return;
     setCameraError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError(t('cameraUnavailable'));
       return;
     }
+    startingRef.current = true;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 } },
-        audio: false,
-      });
+      const stream = await openCameraStream('user', 720);
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
       setCameraActive(true);
-      requestAnimationFrame(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      });
     } catch {
-      setCameraError(t('cameraAccessError'));
+      if (mountedRef.current) setCameraError(t('cameraAccessError'));
+    } finally {
+      startingRef.current = false;
     }
   };
 
@@ -82,8 +108,7 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
           />
           <div className="stack-sm">
             <span className="muted" style={{ fontSize: '0.85rem' }}>
-              {t('encodedSummary')} ({(value.byteLength / 1024).toFixed(1)} KB,{' '}
-              {value.mimeType})
+              {t('encodedSummary')} ({(value.byteLength / 1024).toFixed(1)} KB)
             </span>
             <button
               type="button"

@@ -49,7 +49,7 @@ const en = {
   studentTitle: 'Student',
   showMyLiveQr: 'Show My Live QR',
   studentRegistration: 'Student Registration',
-  lostPhoneRecover: 'Lost Phone / Key Recovery',
+  lostPhoneRecover: 'Lost Phone / Regenerate Key',
   teacherTitle: 'Teacher',
   openTeacherClasses: 'Open Teacher Classes',
   teacherPasskeySignIn: 'Teacher Passkey Sign In',
@@ -58,7 +58,7 @@ const en = {
     'On iOS Safari tap Share → Add to Home Screen. On Android Chrome or Desktop tap Install App in the address bar or header so offline cold-starts work reliably.',
 
   // Selfie Capture
-  selfieLabel: 'Live Selfie Photo (WebP HD, max 1 MB)',
+  selfieLabel: 'Live Selfie Photo',
   encodedSummary: 'Encoded',
   retakeSelfie: 'Retake Selfie',
   capturePhoto: 'Capture Photo',
@@ -68,6 +68,8 @@ const en = {
   cameraAccessError:
     'Could not access the front camera. Check permissions and try again.',
   selfieProcessError: 'Failed to process photo.',
+  selfieBlankError:
+    'That photo looks blank, too dark, or too bright. Make sure your face is visible and try again.',
   capturedSelfieAlt: 'Captured student selfie',
 
   // Student Register
@@ -76,7 +78,7 @@ const en = {
     'Your non-extractable signing key is locked in this browser.',
   registeredAs: 'Registered as',
   openLiveQr: 'Open Live QR',
-  rotateRecoverKey: 'Rotate / Recover Key',
+  rotateRecoverKey: 'Rotate / Regenerate Key',
   studentRegSubtitle:
     'One-time setup. Your signing key never leaves this device.',
   schoolStudentId: 'School Student ID',
@@ -85,11 +87,11 @@ const en = {
   fullNamePlaceholder: 'e.g. Jane Doe',
   completeRegistration: 'Complete Registration',
   generatingKey: 'Generating Key & Registering…',
-  lostPhoneLink: 'Lost phone or cleared data? Recover key',
+  lostPhoneLink: 'Lost phone or cleared data? Regenerate key',
   errMissingIdName: 'Please enter both your School Student ID and Full Name.',
   errMissingSelfie: 'Please capture or upload a selfie photo.',
   errExistingKey:
-    'A key already exists on this device. Open your QR or use Recovery if needed.',
+    'A key already exists on this device. Open your QR or regenerate your key if needed.',
   errRegFailed: 'Student registration failed.',
   regSuccess:
     'Registration complete. Your teacher will add you when they scan your QR.',
@@ -98,7 +100,7 @@ const en = {
   loadingStudentCreds: 'Loading student credentials…',
   qrAriaLabel: 'Live signed student attendance QR code',
   recoveryQrBanner:
-    'Recovery QR Active: Show this QR to your teacher so they can approve your new key during the scan.',
+    'New Key QR Active: Show this QR to your teacher so they can approve your new key during the scan.',
   pendingUploadBanner:
     'Selfie upload pending: Connect to the internet once so your photo finishes uploading to Firebase Storage before your teacher’s first scan.',
   uploadNow: 'Sync Photo Now',
@@ -107,18 +109,18 @@ const en = {
   idLabel: 'ID',
   keyFp: 'Key FP',
   refreshNow: 'Refresh Now',
-  keyRecovery: 'Key Recovery',
+  keyRecovery: 'Regenerate Key',
 
   // Student Recover
-  studentRecoverTitle: 'Student Key Recovery',
+  studentRecoverTitle: 'Regenerate Student Key',
   studentRecoverSubtitle:
     'Lost your phone or cleared browser data? Generate a new device key and show the resulting QR to your teacher.',
   studentRecoverWarning:
-    'An internet connection is needed to upload your new photo, and your teacher must be online the first time they scan your recovered QR to approve the key rotation.',
+    'An internet connection is needed to upload your new photo, and your teacher must be online the first time they scan your new QR to approve the key rotation.',
   errRecoverSelfie:
     'Capture a new live selfie so your teacher can verify your identity.',
-  errRecoverFailed: 'Failed to prepare key recovery.',
-  generateRecoveryQr: 'Generate Recovery QR',
+  errRecoverFailed: 'Failed to prepare key regeneration.',
+  generateRecoveryQr: 'Generate New Key QR',
   generatingNewKey: 'Generating New Key…',
   backToRegistration: 'Back to Registration',
 
@@ -183,6 +185,7 @@ const en = {
   startingCamera: 'Starting camera…',
   cameraScanErr:
     'Unable to access the rear camera. Grant camera permissions and try again.',
+  retryCamera: 'Retry camera',
   scanInstruction: 'Point the camera at the student’s live rotating QR code.',
   presentToday: 'Present Today',
   noStudentsScannedToday: 'No students scanned yet today.',
@@ -282,7 +285,7 @@ const ptBR: Record<TranslationKey, string> = {
   studentTitle: 'Aluno',
   showMyLiveQr: 'Mostrar Meu QR ao Vivo',
   studentRegistration: 'Cadastro de Aluno',
-  lostPhoneRecover: 'Perdi o Celular / Recuperar Chave',
+  lostPhoneRecover: 'Perdi o Celular / Regenerar Chave',
   teacherTitle: 'Professor',
   openTeacherClasses: 'Abrir Minhas Turmas',
   teacherPasskeySignIn: 'Entrar com Passkey',
@@ -291,7 +294,7 @@ const ptBR: Record<TranslationKey, string> = {
     'No Safari (iOS), toque em Compartilhar → Adicionar à Tela de Início. No Chrome (Android ou Desktop), toque em Instalar App na barra ou cabeçalho para abrir offline sem falhas.',
 
   // Selfie Capture
-  selfieLabel: 'Foto Selfie ao Vivo (WebP HD, máx. 1 MB)',
+  selfieLabel: 'Foto Selfie ao Vivo',
   encodedSummary: 'Codificada',
   retakeSelfie: 'Tirar Outra Foto',
   capturePhoto: 'Capturar Foto',
@@ -301,6 +304,8 @@ const ptBR: Record<TranslationKey, string> = {
   cameraAccessError:
     'Não foi possível acessar a câmera frontal. Verifique as permissões e tente novamente.',
   selfieProcessError: 'Falha ao processar a foto.',
+  selfieBlankError:
+    'A foto parece vazia, escura ou clara demais. Verifique se seu rosto está visível e tente novamente.',
   capturedSelfieAlt: 'Selfie capturada do aluno',
 
   // Student Register
@@ -309,7 +314,7 @@ const ptBR: Record<TranslationKey, string> = {
     'Sua chave de assinatura não-exportável está protegida neste navegador.',
   registeredAs: 'Cadastrado como',
   openLiveQr: 'Abrir QR ao Vivo',
-  rotateRecoverKey: 'Trocar / Recuperar Chave',
+  rotateRecoverKey: 'Trocar / Regenerar Chave',
   studentRegSubtitle:
     'Configuração única. Sua chave privada nunca sai deste dispositivo.',
   schoolStudentId: 'Matrícula / ID Escolar',
@@ -318,11 +323,11 @@ const ptBR: Record<TranslationKey, string> = {
   fullNamePlaceholder: 'ex.: Maria Silva',
   completeRegistration: 'Concluir Cadastro',
   generatingKey: 'Gerando Chave e Cadastrando…',
-  lostPhoneLink: 'Trocou de celular ou limpou os dados? Recuperar chave',
+  lostPhoneLink: 'Trocou de celular ou limpou os dados? Regenerar chave',
   errMissingIdName: 'Informe sua Matrícula/ID Escolar e seu Nome Completo.',
   errMissingSelfie: 'Capture ou envie uma foto selfie.',
   errExistingKey:
-    'Já existe uma chave neste dispositivo. Abra seu QR ou use Recuperação.',
+    'Já existe uma chave neste dispositivo. Abra seu QR ou regenere sua chave se necessário.',
   errRegFailed: 'Falha ao cadastrar aluno.',
   regSuccess:
     'Cadastro concluído. Seu professor adicionará você à turma ao ler seu QR.',
@@ -331,7 +336,7 @@ const ptBR: Record<TranslationKey, string> = {
   loadingStudentCreds: 'Carregando credenciais do aluno…',
   qrAriaLabel: 'QR code de presença assinado e ao vivo do aluno',
   recoveryQrBanner:
-    'QR de Recuperação Ativo: Mostre este QR ao professor para aprovar sua nova chave durante a leitura.',
+    'QR de Nova Chave Ativo: Mostre este QR ao professor para aprovar sua nova chave durante a leitura.',
   pendingUploadBanner:
     'Envio da foto pendente: Conecte-se à internet uma vez para concluir o envio da sua foto ao Firebase Storage antes da primeira leitura.',
   uploadNow: 'Enviar Foto Agora',
@@ -340,18 +345,18 @@ const ptBR: Record<TranslationKey, string> = {
   idLabel: 'Matrícula',
   keyFp: 'Impressão da Chave',
   refreshNow: 'Atualizar Agora',
-  keyRecovery: 'Recuperar Chave',
+  keyRecovery: 'Regenerar Chave',
 
   // Student Recover
-  studentRecoverTitle: 'Recuperação de Chave do Aluno',
+  studentRecoverTitle: 'Regenerar Chave do Aluno',
   studentRecoverSubtitle:
     'Perdeu o celular ou limpou os dados do navegador? Gere uma nova chave neste aparelho e mostre o QR ao professor.',
   studentRecoverWarning:
     'É necessária conexão com a internet para enviar sua nova foto, e o professor deve estar online na primeira leitura para aprovar a troca de chave.',
   errRecoverSelfie:
     'Tire uma nova selfie ao vivo para que o professor confirme sua identidade.',
-  errRecoverFailed: 'Falha ao preparar a recuperação da chave.',
-  generateRecoveryQr: 'Gerar QR de Recuperação',
+  errRecoverFailed: 'Falha ao preparar a regeneração da chave.',
+  generateRecoveryQr: 'Gerar QR de Nova Chave',
   generatingNewKey: 'Gerando Nova Chave…',
   backToRegistration: 'Voltar ao Cadastro',
 
@@ -416,6 +421,7 @@ const ptBR: Record<TranslationKey, string> = {
   startingCamera: 'Iniciando câmera…',
   cameraScanErr:
     'Não foi possível acessar a câmera traseira. Conceda permissão e tente novamente.',
+  retryCamera: 'Tentar novamente a câmera',
   scanInstruction: 'Aponte a câmera para o QR code ao vivo do aluno.',
   presentToday: 'Presentes Hoje',
   noStudentsScannedToday: 'Nenhum aluno lido hoje ainda.',

@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   Camera,
   CheckCircle2,
+  RefreshCw,
   ShieldAlert,
   User,
 } from 'lucide-react';
@@ -37,6 +38,7 @@ import {
   selfieCacheKey,
 } from '../../../lib/idb';
 import { useI18n } from '../../../lib/i18n';
+import { openCameraStream } from '../../../lib/camera';
 import { studentDocId } from '../../../lib/studentKey';
 import { getLocalSessionDate } from '../../../lib/time';
 import {
@@ -92,6 +94,7 @@ export function TeacherScanPage() {
   const [rotationModal, setRotationModal] =
     useState<RotationModalState | null>(null);
   const [rotationBusy, setRotationBusy] = useState(false);
+  const [cameraRetry, setCameraRetry] = useState(0);
   const [zoomedSelfie, setZoomedSelfie] = useState<ZoomedSelfie | null>(null);
 
   const today = getLocalSessionDate();
@@ -377,6 +380,13 @@ export function TeacherScanPage() {
     [user, classId, rotationModal, buildDeps, applyOutcome]
   );
 
+  // The camera effect must not restart when roster/attendance state changes,
+  // so it reads the latest handler and translator through refs.
+  const handleDecodedQrRef = useRef(handleDecodedQr);
+  handleDecodedQrRef.current = handleDecodedQr;
+  const tRef = useRef(t);
+  tRef.current = t;
+
   useEffect(() => {
     const worker = new Worker(
       new URL('../../../workers/qr-decoder.worker.ts', import.meta.url),
@@ -393,36 +403,47 @@ export function TeacherScanPage() {
       busyDecodingRef.current = false;
       if (!active) return;
       if (event.data.text) {
-        void handleDecodedQr(event.data.text);
+        void handleDecodedQrRef.current(event.data.text);
       }
     };
 
     const startScanner = async () => {
+      setCameraReady(false);
       if (!navigator.mediaDevices?.getUserMedia) {
-        setCameraError(t('cameraScanErr'));
+        setCameraError(tRef.current('cameraScanErr'));
         return;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 1280 },
-          },
-          audio: false,
-        });
+        const stream = await openCameraStream('environment');
         if (!active) {
           stream.getTracks().forEach((tTrack) => tTrack.stop());
           return;
         }
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-          setCameraReady(true);
+        const video = videoRef.current;
+        if (!video) {
+          stream.getTracks().forEach((tTrack) => tTrack.stop());
+          streamRef.current = null;
+          return;
         }
+        const markReady = () => {
+          if (active) setCameraReady(true);
+        };
+        video.addEventListener('playing', markReady, { once: true });
+        video.srcObject = stream;
+        try {
+          await video.play();
+        } catch {
+          // The muted inline video can finish starting on the next frame.
+        }
+        markReady();
       } catch {
-        setCameraError(t('cameraScanErr'));
+        if (!active) return;
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((tTrack) => tTrack.stop());
+          streamRef.current = null;
+        }
+        setCameraError(tRef.current('cameraScanErr'));
       }
     };
 
@@ -468,7 +489,7 @@ export function TeacherScanPage() {
         streamRef.current = null;
       }
     };
-  }, [handleDecodedQr, t]);
+  }, [classId, cameraRetry]);
 
   const handleApproveRotation = async () => {
     if (!rotationModal || !user || !classId) return;
@@ -624,7 +645,24 @@ export function TeacherScanPage() {
           )}
         </div>
         {cameraError && (
-          <div className="alert alert-warning">{cameraError}</div>
+          <div
+            className="alert alert-warning row-between"
+            style={{ flexWrap: 'wrap', gap: '0.5rem' }}
+          >
+            <span>{cameraError}</span>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => {
+                setCameraError(null);
+                setCameraReady(false);
+                setCameraRetry((n) => n + 1);
+              }}
+            >
+              <RefreshCw size={14} />
+              {t('retryCamera')}
+            </button>
+          </div>
         )}
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem', textAlign: 'center' }}>
           {t('scanInstruction')}

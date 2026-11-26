@@ -1,5 +1,6 @@
 import { CONFIG } from '../config';
 import { LocalizedError } from '../errors';
+import { analyzeLuminance, isBlankSelfie } from './quality';
 import { sha256Hex } from '../crypto';
 
 export interface EncodedSelfie {
@@ -61,6 +62,16 @@ export function bytesToWebpDataUrl(bytes: Uint8Array): string {
 }
 
 async function encodeCanvasWebP(canvas: HTMLCanvasElement): Promise<EncodedSelfie> {
+  // A photo is mandatory for a signing key: refuse empty/all-black/all-white
+  // frames (e.g. the camera had not produced a frame yet).
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (ctx) {
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    if (isBlankSelfie(analyzeLuminance(data, canvas.width, canvas.height))) {
+      throw new LocalizedError('selfieBlankError');
+    }
+  }
+
   const qualitySteps = [CONFIG.SELFIE_WEBP_QUALITY, 0.72, 0.6, 0.45, 0.3];
   let blob = await canvasToWebpBlob(canvas, qualitySteps[0]);
 
