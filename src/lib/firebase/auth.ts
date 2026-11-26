@@ -10,6 +10,7 @@ import {
   browserSupportsWebAuthn,
 } from '@simplewebauthn/browser';
 import { auth } from './client';
+import { LocalizedError } from '../errors';
 import { CONFIG } from '../config';
 import { clearTeacherCaches } from '../idb';
 
@@ -27,8 +28,8 @@ export async function verifyOnlineTurnstile(
     body: JSON.stringify({ turnstileToken, action }),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Bot verification failed.');
+    const payload = await res.json().catch(() => ({}));
+    throw new LocalizedError('errBotVerification', { cause: payload });
   }
 }
 
@@ -49,7 +50,7 @@ export async function registerTeacherWithPasskey(
   turnstileToken?: string
 ): Promise<User> {
   if (!browserSupportsWebAuthn()) {
-    throw new Error('Passkeys (WebAuthn) are not supported on this browser.');
+    throw new LocalizedError('passkeyUnsupported');
   }
 
   const optionsRes = await fetch(passkeyEndpoint('/register/options'), {
@@ -62,8 +63,8 @@ export async function registerTeacherWithPasskey(
   });
 
   if (!optionsRes.ok) {
-    const err = await optionsRes.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to start passkey registration.');
+    const payload = await optionsRes.json().catch(() => ({}));
+    throw new LocalizedError('errPasskeyRegisterFailed', { cause: payload });
   }
 
   const { challengeId, options } = await optionsRes.json();
@@ -76,8 +77,8 @@ export async function registerTeacherWithPasskey(
   });
 
   if (!verifyRes.ok) {
-    const err = await verifyRes.json().catch(() => ({}));
-    throw new Error(err.error || 'Passkey registration verification failed.');
+    const payload = await verifyRes.json().catch(() => ({}));
+    throw new LocalizedError('errPasskeyRegisterFailed', { cause: payload });
   }
 
   const { customToken } = (await verifyRes.json()) as { customToken: string };
@@ -90,7 +91,7 @@ export async function signInTeacherWithPasskey(
   turnstileToken?: string
 ): Promise<User> {
   if (!browserSupportsWebAuthn()) {
-    throw new Error('Passkeys (WebAuthn) are not supported on this browser.');
+    throw new LocalizedError('passkeyUnsupported');
   }
 
   const optionsRes = await fetch(passkeyEndpoint('/login/options'), {
@@ -100,8 +101,8 @@ export async function signInTeacherWithPasskey(
   });
 
   if (!optionsRes.ok) {
-    const err = await optionsRes.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to start passkey sign-in.');
+    const payload = await optionsRes.json().catch(() => ({}));
+    throw new LocalizedError('errPasskeyLoginFailed', { cause: payload });
   }
 
   const { challengeId, options } = await optionsRes.json();
@@ -114,8 +115,8 @@ export async function signInTeacherWithPasskey(
   });
 
   if (!verifyRes.ok) {
-    const err = await verifyRes.json().catch(() => ({}));
-    throw new Error(err.error || 'Passkey sign-in verification failed.');
+    const payload = await verifyRes.json().catch(() => ({}));
+    throw new LocalizedError('errPasskeyLoginFailed', { cause: payload });
   }
 
   const { customToken } = (await verifyRes.json()) as { customToken: string };

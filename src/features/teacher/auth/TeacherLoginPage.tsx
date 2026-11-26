@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Fingerprint, KeyRound, UserPlus } from 'lucide-react';
+import { Fingerprint, KeyRound, UserPlus } from 'lucide-react';
 import { useApp } from '../../../app/AppProvider';
 import { TurnstileWidget } from '../../../components/TurnstileWidget';
 import { CONFIG } from '../../../lib/config';
+import { errorMessage } from '../../../lib/errors';
 import {
   isPasskeySupported,
   registerTeacherWithPasskey,
@@ -44,7 +45,7 @@ export function TeacherLoginPage() {
       await signInTeacherWithPasskey(loginToken ?? undefined);
       navigate('/teacher/classes', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Passkey sign-in failed.');
+      setError(errorMessage(err, t, 'errPasskeyLoginFailed'));
     } finally {
       setBusy(null);
       setLoginReset((n) => n + 1);
@@ -63,9 +64,7 @@ export function TeacherLoginPage() {
       await registerTeacherWithPasskey(displayName, regToken ?? undefined);
       navigate('/teacher/classes', { replace: true });
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Passkey account creation failed.'
-      );
+      setError(errorMessage(err, t, 'errPasskeyRegisterFailed'));
     } finally {
       setBusy(null);
       setRegReset((n) => n + 1);
@@ -77,14 +76,9 @@ export function TeacherLoginPage() {
       <div className="card stack-md">
         <div className="row">
           <Fingerprint size={28} />
-          <div>
-            <h1 style={{ margin: 0, fontSize: '1.35rem' }}>
-              {t('teacherPasskeySignIn')}
-            </h1>
-            <p className="muted" style={{ margin: 0, fontSize: '0.9rem' }}>
-              {t('teacherPasskeySubtitle')}
-            </p>
-          </div>
+          <h1 style={{ margin: 0, fontSize: '1.35rem' }}>
+            {t('teacherPasskeySignIn')}
+          </h1>
         </div>
 
         {!supported && (
@@ -127,14 +121,6 @@ export function TeacherLoginPage() {
           <h2 style={{ margin: 0, fontSize: '1.1rem' }}>
             {t('createTeacherAccount')}
           </h2>
-        </div>
-
-        <div className="alert alert-warning row" style={{ alignItems: 'flex-start' }}>
-          <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <strong>{t('permanentWarningTitle')}</strong>{' '}
-            {t('permanentWarningBody')}
-          </div>
         </div>
 
         <form onSubmit={handleRegister} className="stack-md">

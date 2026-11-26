@@ -5,6 +5,7 @@ import { ShieldCheck, KeyRound } from 'lucide-react';
 import { SelfieCapture } from '../../../components/SelfieCapture';
 import { TurnstileWidget } from '../../../components/TurnstileWidget';
 import { CONFIG } from '../../../lib/config';
+import { LocalizedError, errorMessage } from '../../../lib/errors';
 import type { EncodedSelfie } from '../../../lib/image/selfie';
 import {
   computeFingerprintFromSpki,
@@ -85,7 +86,7 @@ export function StudentRegisterPage() {
     try {
       const existingKey = await getStudentPrivateKey();
       if (existingKey) {
-        throw new Error(t('errExistingKey'));
+        throw new LocalizedError('errExistingKey');
       }
 
       if (navigator.onLine && CONFIG.TURNSTILE_SITE_KEY && turnstileToken) {
@@ -162,7 +163,7 @@ export function StudentRegisterPage() {
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           if (msg.includes('permission-denied') || msg.includes('PERMISSION_DENIED')) {
-            throw new Error(t('errDuplicateSid'));
+            throw new LocalizedError('errDuplicateSid');
           }
           void writePromise.catch(() => {});
         }
@@ -175,7 +176,7 @@ export function StudentRegisterPage() {
         navigate('/student/qr');
       }, 900);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('errRegFailed'));
+      setError(errorMessage(err, t, 'errRegFailed'));
     } finally {
       setSubmitting(false);
       setTurnstileReset((n) => n + 1);

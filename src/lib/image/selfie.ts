@@ -1,4 +1,5 @@
 import { CONFIG } from '../config';
+import { LocalizedError } from '../errors';
 import { sha256Hex } from '../crypto';
 
 export interface EncodedSelfie {
@@ -21,7 +22,7 @@ function drawCenterCroppedSquare(
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    throw new Error('Could not acquire 2D canvas context');
+    throw new LocalizedError('errSelfieEncode');
   }
 
   const side = Math.min(srcWidth, srcHeight);
@@ -41,7 +42,7 @@ function canvasToWebpBlob(
         if (blob) {
           resolve(blob);
         } else {
-          reject(new Error('Failed to encode WebP selfie'));
+          reject(new LocalizedError('errSelfieEncode'));
         }
       },
       'image/webp',
@@ -68,7 +69,7 @@ async function encodeCanvasWebP(canvas: HTMLCanvasElement): Promise<EncodedSelfi
   }
 
   if (blob.size > CONFIG.SELFIE_MAX_BYTES) {
-    throw new Error('Selfie exceeds 1 MB maximum limit even after compression.');
+    throw new LocalizedError('errSelfieTooLarge');
   }
 
   const buffer = await blob.arrayBuffer();
@@ -100,7 +101,7 @@ export async function encodeSelfieFromFile(file: File | Blob): Promise<EncodedSe
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const el = new Image();
       el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error('Failed to decode selected image'));
+      el.onerror = () => reject(new LocalizedError('selfieDecodeError'));
       el.src = url;
     });
     const canvas = drawCenterCroppedSquare(

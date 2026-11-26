@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { KeyRound, RefreshCw, UploadCloud } from 'lucide-react';
+import { KeyRound, RefreshCw, Settings, UploadCloud } from 'lucide-react';
 import { CONFIG } from '../../../lib/config';
 import {
   getStudentPrivateKey,
@@ -9,6 +9,7 @@ import {
 } from '../../../lib/idb';
 import { ensureStudentAnonymousAuth } from '../../../lib/firebase/auth';
 import { uploadStudentSelfie } from '../../../lib/firebase/storage';
+import { errorMessage } from '../../../lib/errors';
 import { createSignedQrPayload, renderQrToCanvas } from '../../../lib/qr';
 import { useI18n } from '../../../lib/i18n';
 import { useApp } from '../../../app/AppProvider';
@@ -94,9 +95,9 @@ export function StudentQrPage() {
       setRemainingMs(CONFIG.QR_REFRESH_MS);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate QR');
+      setError(errorMessage(err, t, 'errQrGenerate'));
     }
-  }, [profile, privateKey]);
+  }, [profile, privateKey, t]);
 
   useEffect(() => {
     if (!profile || !privateKey) return;
@@ -190,7 +191,7 @@ export function StudentQrPage() {
       <div className="qr-frame">
         <canvas
           ref={canvasRef}
-          aria-label="Live signed student attendance QR code"
+          aria-label={t('qrAriaLabel')}
           style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
         />
       </div>
@@ -231,7 +232,7 @@ export function StudentQrPage() {
             />
             <strong>{t('live')}</strong>
             <span className="muted">
-              · {t('refreshesIn')} {secondsLeft}s
+              · {t('refreshesIn', { seconds: secondsLeft })}
             </span>
           </div>
           <div className="muted" style={{ fontSize: '0.78rem' }}>
@@ -249,7 +250,7 @@ export function StudentQrPage() {
         <div style={{ textAlign: 'left' }}>
           <div style={{ fontWeight: 700, fontSize: '1.15rem' }}>{profile.name}</div>
           <div className="mono muted" style={{ fontSize: '0.9rem' }}>
-            ID: {profile.schoolStudentId}
+            {t('idLabel')}: {profile.schoolStudentId}
           </div>
           <div className="mono muted" style={{ fontSize: '0.78rem' }}>
             {t('keyFp')}: {profile.keyFingerprint}
@@ -267,6 +268,15 @@ export function StudentQrPage() {
           {t('keyRecovery')}
         </Link>
       </div>
+
+      <Link
+        to="/"
+        className="qr-options-fab"
+        aria-label={t('options')}
+        title={t('options')}
+      >
+        <Settings size={22} />
+      </Link>
     </div>
   );
 }

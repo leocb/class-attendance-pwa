@@ -5,6 +5,7 @@ import {
   encodeSelfieFromFile,
   type EncodedSelfie,
 } from '../lib/image/selfie';
+import { errorMessage } from '../lib/errors';
 import { useI18n } from '../lib/i18n';
 
 interface SelfieCaptureProps {
@@ -64,7 +65,7 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
       stopCamera();
     } catch (err) {
       setCameraError(
-        err instanceof Error ? err.message : t('selfieProcessError')
+        errorMessage(err, t, 'selfieProcessError')
       );
     }
   };
@@ -79,7 +80,7 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
       stopCamera();
     } catch (err) {
       setCameraError(
-        err instanceof Error ? err.message : t('selfieDecodeError')
+        errorMessage(err, t, 'selfieDecodeError')
       );
     }
   };
@@ -92,7 +93,7 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
         <div className="row" style={{ alignItems: 'center' }}>
           <img
             src={value.dataUrl}
-            alt="Captured student selfie"
+            alt={t('capturedSelfieAlt')}
             className="avatar-lg"
           />
           <div className="stack-sm">

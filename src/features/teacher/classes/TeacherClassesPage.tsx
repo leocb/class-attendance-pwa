@@ -22,6 +22,7 @@ import {
 import { useApp } from '../../../app/AppProvider';
 import { db } from '../../../lib/firebase/client';
 import { ensureStudentSelfieCached } from '../../../lib/firebase/storage';
+import { errorMessage } from '../../../lib/errors';
 import {
   getAllCachedClasses,
   getCachedAttendanceByClass,
@@ -125,7 +126,7 @@ export function TeacherClassesPage() {
         void write.catch(() => {});
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create class.');
+      setError(errorMessage(err, t, 'errClassCreate'));
     } finally {
       setCreating(false);
     }

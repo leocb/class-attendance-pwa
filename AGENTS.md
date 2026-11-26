@@ -36,6 +36,14 @@ Always consult [README.md](README.md) (**Updating & Redeploying**) before modify
   - Keep `functions/.env` (`WEBAUTHN_RP_ID`, `WEBAUTHN_ORIGIN`, `TURNSTILE_SECRET`, `TURNSTILE_HOSTNAMES`) and `.env` gitignored.
 - **Bot Protection**: Teacher passkey login/registration and online student registration/recovery use Cloudflare Turnstile (`TurnstileWidget` + server-side `verifyTurnstileToken` checking `success`, `action`, and `TURNSTILE_HOSTNAMES`).
 
+## Localization (Non-Negotiable)
+
+- Every user-facing string — headings, buttons, labels, placeholders, `alt`/`aria-label` text, banners, toasts, and **error messages** — must come from `src/lib/i18n` via `t('key')` and exist in both `en` and `pt-BR`. Never hardcode English text in JSX.
+- Never render raw library or Cloud Function error text (`err.message`, `HttpsError` messages) in the UI. Throw `LocalizedError('errKey')` from `src/lib/errors.ts`, or resolve with `errorMessage(err, t, 'errFallback')`, which logs the raw error and renders a translated message.
+- The app name itself is localized (`appName`): `Class Attendance` (EN) / `Presença na Sala` (PT-BR).
+- Registered students land on `/student/qr` when opening the app; the QR screen exposes an options button (bottom right) back to `/`.
+
+
 ## Verification & Git Workflow
 
 - Run both test suites and both builds after code changes:

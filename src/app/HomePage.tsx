@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { Fingerprint, GraduationCap, KeyRound, QrCode, UserCheck } from 'lucide-react';
 import { useApp } from './AppProvider';
 import { getStudentProfile } from '../lib/idb';
@@ -7,36 +7,53 @@ import { useI18n } from '../lib/i18n';
 import type { StudentProfile } from '../types';
 
 export function HomePage() {
-  const { isTeacher } = useApp();
+  const { isTeacher, authLoading } = useApp();
   const { t } = useI18n();
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(
     null
   );
 
   useEffect(() => {
-    void getStudentProfile().then((p) => {
-      if (p) setStudentProfile(p);
-    });
+    let active = true;
+    void getStudentProfile()
+      .then((p) => {
+        if (!active) return;
+        setStudentProfile(p ?? null);
+      })
+      .catch(() => {
+        // A missing profile simply means "not registered on this device".
+      })
+      .finally(() => {
+        if (active) setProfileLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
+
+  if (!profileLoaded || authLoading) {
+    return (
+      <div className="card">
+        <p className="muted">{t('loadingStudentCreds')}</p>
+      </div>
+    );
+  }
+
+  // Registered students go straight to their live QR; the QR screen exposes an
+  // options button back to this home page.
+  if (studentProfile && !isTeacher) {
+    return <Navigate to="/student/qr" replace />;
+  }
 
   return (
     <div className="stack-lg">
-      <div className="card stack-sm">
-        <h1 style={{ margin: 0, fontSize: '1.5rem' }}>{t('homeTitle')}</h1>
-        <p className="muted" style={{ margin: 0 }}>
-          {t('homeSubtitle')}
-        </p>
-      </div>
-
       <div className="grid-2">
         <div className="card stack-md">
           <div className="row">
             <QrCode size={24} color="var(--primary)" />
             <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('studentTitle')}</h2>
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: '0.92rem' }}>
-            {t('studentDesc')}
-          </p>
 
           <div className="stack-sm">
             {studentProfile ? (
@@ -62,9 +79,6 @@ export function HomePage() {
             <GraduationCap size={24} color="var(--success)" />
             <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('teacherTitle')}</h2>
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: '0.92rem' }}>
-            {t('teacherDesc')}
-          </p>
 
           <div className="stack-sm">
             {isTeacher ? (

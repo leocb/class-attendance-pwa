@@ -4,6 +4,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { ArrowLeft, Download, FileSpreadsheet } from 'lucide-react';
 import { useApp } from '../../../app/AppProvider';
 import { db } from '../../../lib/firebase/client';
+import { errorMessage } from '../../../lib/errors';
 import {
   getAllCachedClasses,
   getAllCachedStudents,
@@ -156,7 +157,7 @@ export function TeacherExportPage() {
           : t('exportSuccess', { filename, count: chosenClasses.length })
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Excel export failed.');
+      setError(errorMessage(err, t, 'errExportFailed'));
     } finally {
       setExporting(false);
     }

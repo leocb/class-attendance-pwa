@@ -99,14 +99,14 @@ export function TeacherScanPage() {
   const seenNoncesRef = useRef<Map<string, number>>(new Map());
 
   const formatScanError = useCallback(
-    (code: ScanErrorCode, detail?: string): string => {
+    (code: ScanErrorCode): string => {
       switch (code) {
         case 'MALFORMED_QR':
           return t('errMalformedQr');
         case 'FIRST_SCAN_OFFLINE':
           return t('errFirstScanOffline');
         case 'FIRST_SCAN_FAILED':
-          return detail || t('errFirstScanFailed');
+          return t('errFirstScanFailed');
         case 'ROTATION_OFFLINE':
           return t('errRotationOffline');
         case 'INVALID_SIGNATURE':
@@ -120,9 +120,9 @@ export function TeacherScanPage() {
         case 'REPLAYED_NONCE':
           return t('errReplayedNonce');
         case 'ROTATION_FAILED':
-          return detail || t('errRotationFailed');
+          return t('errRotationFailed');
         case 'SELFIE_FETCH_FAILED':
-          return detail || t('errSelfieFetchFailed');
+          return t('errSelfieFetchFailed');
       }
     },
     [t]
@@ -337,7 +337,7 @@ export function TeacherScanPage() {
       } else {
         setStatusBanner({
           type: 'danger',
-          message: formatScanError(outcome.code, outcome.detail),
+          message: formatScanError(outcome.code),
         });
       }
     },
@@ -617,7 +617,7 @@ export function TeacherScanPage() {
               </strong>
             </div>
             <div className="mono muted">
-              ID: {confirmedCard.student.schoolStudentId}
+              {t('idLabel')}: {confirmedCard.student.schoolStudentId}
             </div>
             <div className="mono muted" style={{ fontSize: '0.8rem' }}>
               {t('keyFp')}: {confirmedCard.student.keyFingerprint}
@@ -775,7 +775,7 @@ export function TeacherScanPage() {
                   >
                     <img
                       src={rotationModal.storedSelfieDataUrl}
-                      alt="Stored student selfie"
+                      alt={t('storedSelfieAlt')}
                       className="avatar-lg"
                     />
                   </button>
@@ -810,7 +810,7 @@ export function TeacherScanPage() {
                   >
                     <img
                       src={rotationModal.newSelfieDataUrl}
-                      alt="New QR selfie"
+                      alt={t('newSelfieAlt')}
                       className="avatar-lg"
                     />
                   </button>

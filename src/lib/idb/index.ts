@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { LocalizedError } from '../errors';
 import type {
   Attendance,
   CachedSelfie,
@@ -100,9 +101,7 @@ export async function saveStudentPrivateKeyInitial(privateKey: CryptoKey): Promi
   const existing = await tx.store.get(KV_KEYS.STUDENT_PRIVATE_KEY);
   if (existing) {
     tx.abort();
-    throw new Error(
-      'A student private key already exists on this device. Use recovery to rotate keys.'
-    );
+    throw new LocalizedError('errExistingKey');
   }
   await tx.store.put(privateKey, KV_KEYS.STUDENT_PRIVATE_KEY);
   await tx.done;

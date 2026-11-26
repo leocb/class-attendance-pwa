@@ -37,25 +37,19 @@ const en = {
   export: 'Export',
   signOut: 'Sign out',
   language: 'Language',
+  options: 'Options',
   english: 'English',
   portugueseBr: 'Português (Brasil)',
 
   // Home
-  homeTitle: 'Offline-First Classroom Attendance',
-  homeSubtitle:
-    'Cryptographically signed, rotating 30-second student QR codes scanned by passkey-authenticated teachers. Works completely offline after one-time student–teacher registration.',
   studentTitle: 'Student',
-  studentDesc:
-    'Register once with your school ID and selfie, then display your live signed QR code for attendance.',
   showMyLiveQr: 'Show My Live QR',
   studentRegistration: 'Student Registration',
   lostPhoneRecover: 'Lost Phone / Key Recovery',
   teacherTitle: 'Teacher',
-  teacherDesc:
-    'Sign in with a hardware or platform passkey, manage classes, scan student QRs offline, and export XLSX reports.',
   openTeacherClasses: 'Open Teacher Classes',
   teacherPasskeySignIn: 'Teacher Passkey Sign In',
-  installPwaTitle: 'Install as PWA',
+  installPwaTitle: 'Install as an App',
   installPwaDesc:
     'On iOS Safari tap Share → Add to Home Screen. On Android Chrome or Desktop tap Install App in the address bar or header so offline cold-starts work reliably.',
 
@@ -72,6 +66,7 @@ const en = {
     'Could not access front camera. Check permissions or upload a photo.',
   selfieDecodeError: 'Failed to decode selected image.',
   selfieProcessError: 'Failed to process photo.',
+  capturedSelfieAlt: 'Captured student selfie',
 
   // Student Register
   alreadyRegisteredTitle: 'Student Device Already Registered',
@@ -101,14 +96,16 @@ const en = {
 
   // Student QR
   loadingStudentCreds: 'Loading student credentials…',
+  qrAriaLabel: 'Live signed student attendance QR code',
   recoveryQrBanner:
     'Recovery QR Active: Show this QR to your teacher so they can approve your new key during the scan.',
   pendingUploadBanner:
     'Selfie upload pending: Connect to the internet once so your photo finishes uploading to Firebase Storage before your teacher’s first scan.',
   uploadNow: 'Sync Photo Now',
   live: 'Live',
-  refreshesIn: 'refreshes in',
+  refreshesIn: 'refreshes in {seconds}s',
   signedEcdsa: 'bytes signed ECDSA P-256',
+  idLabel: 'ID',
   keyFp: 'Key FP',
   refreshNow: 'Refresh Now',
   keyRecovery: 'Key Recovery',
@@ -128,8 +125,6 @@ const en = {
 
   // Teacher Auth
   verifyingSession: 'Verifying teacher session…',
-  teacherPasskeySubtitle:
-    'Passkey-only authentication. Once signed in, scanning and Excel export work offline.',
   passkeyUnsupported:
     'WebAuthn passkeys are not supported in this browser or context (HTTPS is required).',
   passkeyOffline:
@@ -137,9 +132,6 @@ const en = {
   waitingPasskey: 'Waiting for Passkey…',
   signInPasskey: 'Sign in with Passkey',
   createTeacherAccount: 'Create Teacher Account',
-  permanentWarningTitle: 'Permanent account warning — no recovery:',
-  permanentWarningBody:
-    'There is no email, no password, and no “forgot passkey” reset. If you delete or lose this passkey, your teacher account and access to your classes are permanently gone.',
   teacherDisplayNameLabel: 'Display Name (shown on your passkey prompt)',
   teacherDisplayNamePlaceholder: 'e.g. Prof. Rivera',
   creatingPasskey: 'Creating Passkey Account…',
@@ -188,6 +180,8 @@ const en = {
   rotationPrompt: 'This student’s key has changed. Approve new key for',
   storedSelfie: 'Stored Selfie',
   newQrSelfie: 'New QR Selfie',
+  storedSelfieAlt: 'Previous student selfie',
+  newSelfieAlt: 'New student selfie',
   oldFp: 'Old FP',
   newFp: 'New FP',
   reject: 'Reject',
@@ -212,6 +206,20 @@ const en = {
   errSelfieHashMismatch: 'QR selfie hash does not match registered record.',
   errReplayedNonce: 'Duplicate QR nonce detected (replay rejected).',
   errTurnstileRequired: 'Please complete the human verification check first.',
+
+  // Operation errors
+  errQrGenerate: 'Could not generate the QR code. Please try again.',
+  errPasskeyLoginFailed: 'Passkey sign-in failed. Please try again.',
+  errPasskeyRegisterFailed:
+    'Could not create the passkey account. Please try again.',
+  errBotVerification: 'Bot verification failed. Please try again.',
+  errClassCreate: 'Could not create the class. Please try again.',
+  errExportFailed: 'Could not export the spreadsheet. Please try again.',
+  errSelfieUpload:
+    'Could not upload the photo. Check your connection and try again.',
+  errSelfieTooLarge:
+    'The photo is still over 1 MB after compression. Try another photo.',
+  errSelfieEncode: 'Could not process the photo. Please try again.',
 
   // Export
   exportTitle: 'Export Attendance (XLSX)',
@@ -244,7 +252,7 @@ const en = {
 export type TranslationKey = keyof typeof en;
 
 const ptBR: Record<TranslationKey, string> = {
-  appName: 'Class Attendance',
+  appName: 'Presença na Sala',
   online: 'Online',
   offline: 'Offline',
   installApp: 'Instalar App',
@@ -252,25 +260,19 @@ const ptBR: Record<TranslationKey, string> = {
   export: 'Exportar',
   signOut: 'Sair',
   language: 'Idioma',
+  options: 'Opções',
   english: 'English',
   portugueseBr: 'Português (Brasil)',
 
   // Home
-  homeTitle: 'Chamada Escolar Offline-First',
-  homeSubtitle:
-    'QR codes rotativos de 30 segundos assinados criptograficamente e lidos por professores autenticados via passkey. Funciona totalmente offline após o primeiro registro aluno–professor.',
   studentTitle: 'Aluno',
-  studentDesc:
-    'Cadastre-se uma única vez com seu RA/matrícula e selfie, depois exiba seu QR code ao vivo para registrar presença.',
   showMyLiveQr: 'Mostrar Meu QR ao Vivo',
   studentRegistration: 'Cadastro de Aluno',
   lostPhoneRecover: 'Perdi o Celular / Recuperar Chave',
   teacherTitle: 'Professor',
-  teacherDesc:
-    'Entre com sua passkey, gerencie turmas, faça a leitura dos QR codes offline e exporte planilhas XLSX.',
   openTeacherClasses: 'Abrir Minhas Turmas',
   teacherPasskeySignIn: 'Entrar com Passkey',
-  installPwaTitle: 'Instalar como Aplicativo (PWA)',
+  installPwaTitle: 'Instalar como App',
   installPwaDesc:
     'No Safari (iOS), toque em Compartilhar → Adicionar à Tela de Início. No Chrome (Android ou Desktop), toque em Instalar App na barra ou cabeçalho para abrir offline sem falhas.',
 
@@ -287,6 +289,7 @@ const ptBR: Record<TranslationKey, string> = {
     'Não foi possível acessar a câmera frontal. Verifique as permissões ou envie uma foto.',
   selfieDecodeError: 'Não foi possível decodificar a imagem selecionada.',
   selfieProcessError: 'Falha ao processar a foto.',
+  capturedSelfieAlt: 'Selfie capturada do aluno',
 
   // Student Register
   alreadyRegisteredTitle: 'Dispositivo do Aluno Já Cadastrado',
@@ -316,14 +319,16 @@ const ptBR: Record<TranslationKey, string> = {
 
   // Student QR
   loadingStudentCreds: 'Carregando credenciais do aluno…',
+  qrAriaLabel: 'QR code de presença assinado e ao vivo do aluno',
   recoveryQrBanner:
     'QR de Recuperação Ativo: Mostre este QR ao professor para aprovar sua nova chave durante a leitura.',
   pendingUploadBanner:
     'Envio da foto pendente: Conecte-se à internet uma vez para concluir o envio da sua foto ao Firebase Storage antes da primeira leitura.',
   uploadNow: 'Enviar Foto Agora',
   live: 'Ao vivo',
-  refreshesIn: 'atualiza em',
+  refreshesIn: 'atualiza em {seconds}s',
   signedEcdsa: 'bytes assinados ECDSA P-256',
+  idLabel: 'Matrícula',
   keyFp: 'Impressão da Chave',
   refreshNow: 'Atualizar Agora',
   keyRecovery: 'Recuperar Chave',
@@ -343,8 +348,6 @@ const ptBR: Record<TranslationKey, string> = {
 
   // Teacher Auth
   verifyingSession: 'Verificando sessão do professor…',
-  teacherPasskeySubtitle:
-    'Autenticação exclusiva por passkey. Após entrar, a leitura e a exportação em Excel funcionam offline.',
   passkeyUnsupported:
     'Passkeys (WebAuthn) não são compatíveis com este navegador ou contexto (HTTPS obrigatório).',
   passkeyOffline:
@@ -352,9 +355,6 @@ const ptBR: Record<TranslationKey, string> = {
   waitingPasskey: 'Aguardando Passkey…',
   signInPasskey: 'Entrar com Passkey',
   createTeacherAccount: 'Criar Conta de Professor',
-  permanentWarningTitle: 'Aviso de conta permanente — sem recuperação:',
-  permanentWarningBody:
-    'Não há e-mail, senha nem opção “esqueci minha passkey”. Se você apagar ou perder esta passkey, sua conta e o acesso às suas turmas serão perdidos permanentemente.',
   teacherDisplayNameLabel: 'Nome de Exibição (mostrado no prompt da passkey)',
   teacherDisplayNamePlaceholder: 'ex.: Prof. Bottaro',
   creatingPasskey: 'Criando Conta com Passkey…',
@@ -403,6 +403,8 @@ const ptBR: Record<TranslationKey, string> = {
   rotationPrompt: 'A chave deste aluno mudou. Aprovar nova chave para',
   storedSelfie: 'Foto Anterior',
   newQrSelfie: 'Nova Foto',
+  storedSelfieAlt: 'Foto anterior do aluno',
+  newSelfieAlt: 'Nova foto do aluno',
   oldFp: 'Chave Antiga',
   newFp: 'Nova Chave',
   reject: 'Rejeitar',
@@ -427,6 +429,20 @@ const ptBR: Record<TranslationKey, string> = {
   errSelfieHashMismatch: 'O hash da foto no QR não confere com o registro do aluno.',
   errReplayedNonce: 'QR já utilizado nesta janela (repetição rejeitada).',
   errTurnstileRequired: 'Conclua a verificação anti-robô antes de continuar.',
+
+  // Operation errors
+  errQrGenerate: 'Não foi possível gerar o QR code. Tente novamente.',
+  errPasskeyLoginFailed: 'Falha ao entrar com passkey. Tente novamente.',
+  errPasskeyRegisterFailed:
+    'Não foi possível criar a conta com passkey. Tente novamente.',
+  errBotVerification: 'Falha na verificação anti-robô. Tente novamente.',
+  errClassCreate: 'Não foi possível criar a turma. Tente novamente.',
+  errExportFailed: 'Não foi possível exportar a planilha. Tente novamente.',
+  errSelfieUpload:
+    'Não foi possível enviar a foto. Verifique a conexão e tente novamente.',
+  errSelfieTooLarge:
+    'A foto continua acima de 1 MB após a compressão. Tente outra foto.',
+  errSelfieEncode: 'Não foi possível processar a foto. Tente novamente.',
 
   // Export
   exportTitle: 'Exportar Chamada (XLSX)',

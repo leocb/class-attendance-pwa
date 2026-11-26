@@ -4,6 +4,7 @@ import { KeyRound } from 'lucide-react';
 import { SelfieCapture } from '../../../components/SelfieCapture';
 import { TurnstileWidget } from '../../../components/TurnstileWidget';
 import { CONFIG } from '../../../lib/config';
+import { errorMessage } from '../../../lib/errors';
 import type { EncodedSelfie } from '../../../lib/image/selfie';
 import {
   computeFingerprintFromSpki,
@@ -113,7 +114,7 @@ export function StudentRecoverPage() {
       await saveStudentProfile(profile);
       navigate('/student/qr');
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('errRecoverFailed'));
+      setError(errorMessage(err, t, 'errRecoverFailed'));
     } finally {
       setSubmitting(false);
       setTurnstileReset((n) => n + 1);

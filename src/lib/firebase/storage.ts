@@ -2,6 +2,7 @@ import { getBytes, ref, uploadBytes } from 'firebase/storage';
 import { storage } from './client';
 import { CONFIG } from '../config';
 import { sha256Hex } from '../crypto';
+import { LocalizedError } from '../errors';
 import { bytesToWebpDataUrl } from '../image/selfie';
 import {
   getCachedSelfie,
@@ -22,13 +23,17 @@ export async function uploadStudentSelfie(params: {
 }): Promise<string> {
   const path = buildSelfieStoragePath(params.sid, params.fp);
   const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, params.bytes, {
-    contentType: 'image/webp',
-    customMetadata: {
-      deviceUid: params.deviceUid,
-      fingerprint: params.fp,
-    },
-  });
+  try {
+    await uploadBytes(storageRef, params.bytes, {
+      contentType: 'image/webp',
+      customMetadata: {
+        deviceUid: params.deviceUid,
+        fingerprint: params.fp,
+      },
+    });
+  } catch (err) {
+    throw new LocalizedError('errSelfieUpload', { cause: err });
+  }
   return path;
 }
 
