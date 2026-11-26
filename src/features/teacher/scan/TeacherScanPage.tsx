@@ -396,6 +396,8 @@ export function TeacherScanPage() {
 
     let reqId = 0;
     let active = true;
+    let lastPostAt = 0;
+    busyDecodingRef.current = false;
 
     worker.onmessage = (
       event: MessageEvent<{ id: number; text: string | null }>
@@ -450,7 +452,13 @@ export function TeacherScanPage() {
     void startScanner();
 
     const frameTimer = window.setInterval(() => {
-      if (!active || busyDecodingRef.current || processingScanRef.current) return;
+      if (!active || processingScanRef.current) return;
+      // Recover if a worker response never arrived (e.g. it was terminated
+      // mid-decode): otherwise the scanner would silently stop forever.
+      if (busyDecodingRef.current) {
+        if (Date.now() - lastPostAt < 2500) return;
+        busyDecodingRef.current = false;
+      }
       const video = videoRef.current;
       if (!video || video.readyState < 2 || !video.videoWidth) return;
 
@@ -476,12 +484,14 @@ export function TeacherScanPage() {
       const imageData = ctx.getImageData(0, 0, w, h);
 
       busyDecodingRef.current = true;
+      lastPostAt = Date.now();
       reqId += 1;
       worker.postMessage({ id: reqId, imageData }, [imageData.data.buffer]);
     }, 220);
 
     return () => {
       active = false;
+      busyDecodingRef.current = false;
       window.clearInterval(frameTimer);
       worker.terminate();
       if (streamRef.current) {
