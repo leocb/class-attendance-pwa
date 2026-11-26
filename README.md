@@ -40,6 +40,28 @@ npm --prefix functions run build
 
 **Bot check on localhost:** the Turnstile gate is automatically disabled when the app runs on `localhost`/`127.0.0.1` (the production sitekey is not valid there), and `verifyTurnstileToken` skips verification when `FUNCTIONS_EMULATOR=true`. Deployed environments still verify every token.
 
+### Local Tunnel (`alunos-dev.leobottaro.com`)
+
+`cloudflared` publishes the Vite dev server on this Mac at **https://alunos-dev.leobottaro.com**:
+
+```bash
+# Start the app (DEV_TUNNEL_HOST enables Vite allowedHosts + WSS HMR through the tunnel)
+npm run dev:tunnel
+
+# Tunnel status / logs
+launchctl print gui/$(id -u)/com.leocb.cloudflared.alunos-dev | grep -E "state|pid"
+tail -f ~/Library/Logs/cloudflared-alunos-dev.log
+
+# Restart the tunnel after config changes
+launchctl kickstart -k gui/$(id -u)/com.leocb.cloudflared.alunos-dev
+```
+
+- Tunnel `alunos-dev` (`d566ef33-5dbc-4291-a532-ba6926f2cea2`), config `~/.cloudflared/alunos-dev.yml`, origin `http://127.0.0.1:5173`.
+- LaunchAgent `~/Library/LaunchAgents/com.leocb.cloudflared.alunos-dev.plist` starts it at login and keeps it alive.
+- The dev hostname is treated like localhost for Turnstile, so the gate stays out of the way.
+- The dev app still uses the **production** Firebase project, and `/api/passkey` is not proxied by Vite, so teacher passkey auth does not work on the dev host. Student registration/QR/recovery do work.
+
+
 ## Initial Environment Setup (Reference)
 
 1. **Firebase Console (`classroom-attendance-a03af`)**:

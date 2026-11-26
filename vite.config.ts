@@ -2,7 +2,17 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// Optional public hostname for a Cloudflare tunnel (e.g. alunos-dev.leobottaro.com).
+// Set via `npm run dev:tunnel`; keeps plain localhost dev unaffected.
+const devTunnelHost = process.env.DEV_TUNNEL_HOST?.trim();
+
 export default defineConfig({
+  server: {
+    allowedHosts: devTunnelHost ? [devTunnelHost] : undefined,
+    hmr: devTunnelHost
+      ? { host: devTunnelHost, protocol: 'wss', clientPort: 443 }
+      : undefined,
+  },
   plugins: [
     react(),
     VitePWA({

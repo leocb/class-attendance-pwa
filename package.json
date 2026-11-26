@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:tunnel": "DEV_TUNNEL_HOST=alunos-dev.leobottaro.com vite --host 127.0.0.1 --port 5173",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "dev:cf": "npm run build && npx wrangler dev",

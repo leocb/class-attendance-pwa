@@ -10,6 +10,7 @@ Always consult [README.md](README.md) (**Updating & Redeploying**) before modify
 
 - **App Name**: `Class Attendance` (localized in `en` and `pt-BR`)
 - **Production Domain**: `https://alunos.leobottaro.com`
+- **Dev Tunnel**: `https://alunos-dev.leobottaro.com` → local Vite server on this Mac via the `alunos-dev` `cloudflared` tunnel (LaunchAgent `com.leocb.cloudflared.alunos-dev`). Start the app with `npm run dev:tunnel`. Turnstile is bypassed on localhost and this hostname.
 - **Cloudflare**:
   - Account ID: `cbccd23973b3b71b305a4e8efc1c4562`
   - Worker Name: `class-attendance-pwa` (`wrangler.jsonc` + `worker/index.ts`)
