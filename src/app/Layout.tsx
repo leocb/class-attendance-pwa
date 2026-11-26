@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
   Download,
   Globe,
-  GraduationCap,
   LogOut,
   QrCode,
   Wifi,
@@ -22,7 +21,6 @@ interface BeforeInstallPromptEvent extends Event {
 export function Layout({ children }: { children: ReactNode }) {
   const { isOnline, isTeacher } = useApp();
   const { locale, setLocale, t } = useI18n();
-  const location = useLocation();
   const navigate = useNavigate();
   const [installEvent, setInstallEvent] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -64,8 +62,6 @@ export function Layout({ children }: { children: ReactNode }) {
     setLocale(next);
     setLangOpen(false);
   };
-
-  const inTeacherArea = location.pathname.startsWith('/teacher');
 
   return (
     <div className="app-shell">
@@ -150,25 +146,16 @@ export function Layout({ children }: { children: ReactNode }) {
             </button>
           )}
 
-          {inTeacherArea && isTeacher && (
-            <>
-              <Link to="/teacher/classes" className="btn btn-sm">
-                <GraduationCap size={14} />
-                {t('classes')}
-              </Link>
-              <Link to="/teacher/export" className="btn btn-sm">
-                {t('export')}
-              </Link>
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={handleSignOut}
-                title={t('signOut')}
-                aria-label={t('signOut')}
-              >
-                <LogOut size={14} />
-              </button>
-            </>
+          {isTeacher && (
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={handleSignOut}
+              title={t('signOut')}
+              aria-label={t('signOut')}
+            >
+              <LogOut size={14} />
+            </button>
           )}
         </div>
       </header>

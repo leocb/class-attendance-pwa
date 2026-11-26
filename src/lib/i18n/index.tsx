@@ -144,8 +144,6 @@ const en = {
 
   // Teacher Classes
   yourClasses: 'Your Classes',
-  classesSubtitle:
-    'Students join a class automatically the first time you scan their QR.',
   exportXlsx: 'Export XLSX',
   createNewClass: 'Create New Class',
   classNamePlaceholder: 'e.g. Biology 12 – Group A',
@@ -162,6 +160,17 @@ const en = {
   noStudentsInClass:
     'No students in this class yet. Scan a student’s QR while online to add them.',
   recordedSessions: 'Recorded sessions',
+  moreActions: 'More actions',
+  rename: 'Rename',
+  archive: 'Archive',
+  unarchive: 'Unarchive',
+  archived: 'Archived',
+  save: 'Save',
+  showArchived: 'Show archived ({count})',
+  hideArchived: 'Hide archived',
+  errClassRename: 'Could not rename the class. Please try again.',
+  errClassArchive: 'Could not archive the class. Please try again.',
+  errClassOffline: 'Managing classes requires an internet connection.',
 
   // Teacher Scan
   scanAttendanceTitle: 'Scan Attendance',
@@ -370,8 +379,6 @@ const ptBR: Record<TranslationKey, string> = {
 
   // Teacher Classes
   yourClasses: 'Suas Turmas',
-  classesSubtitle:
-    'Os alunos entram na turma automaticamente na primeira vez que você lê o QR deles.',
   exportXlsx: 'Exportar XLSX',
   createNewClass: 'Criar Nova Turma',
   classNamePlaceholder: 'ex.: Biologia 12 – Turma A',
@@ -388,6 +395,17 @@ const ptBR: Record<TranslationKey, string> = {
   noStudentsInClass:
     'Nenhum aluno nesta turma ainda. Leia o QR de um aluno estando online para adicioná-lo.',
   recordedSessions: 'Aulas registradas',
+  moreActions: 'Mais ações',
+  rename: 'Renomear',
+  archive: 'Arquivar',
+  unarchive: 'Desarquivar',
+  archived: 'Arquivada',
+  save: 'Salvar',
+  showArchived: 'Mostrar arquivadas ({count})',
+  hideArchived: 'Ocultar arquivadas',
+  errClassRename: 'Não foi possível renomear a turma. Tente novamente.',
+  errClassArchive: 'Não foi possível arquivar a turma. Tente novamente.',
+  errClassOffline: 'Gerenciar turmas exige conexão com a internet.',
 
   // Teacher Scan
   scanAttendanceTitle: 'Fazer Chamada',

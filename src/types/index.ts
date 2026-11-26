@@ -23,6 +23,9 @@ export interface ClassDoc {
   teacherUid: string;
   studentIds: string[];
   createdAt: number;
+  /** Set by the manageClass Cloud Function; archived classes are hidden by default. */
+  archived?: boolean;
+  archivedAt?: number | null;
 }
 
 export interface Attendance {

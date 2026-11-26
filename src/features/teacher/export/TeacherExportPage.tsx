@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { ArrowLeft, Download, FileSpreadsheet } from 'lucide-react';
 import { useApp } from '../../../app/AppProvider';
@@ -25,6 +25,8 @@ import type { Attendance, ClassDoc, Student } from '../../../types';
 export function TeacherExportPage() {
   const { user, isOnline } = useApp();
   const { t } = useI18n();
+  const [searchParams] = useSearchParams();
+  const preselectClassId = searchParams.get('classId');
   const [classes, setClasses] = useState<ClassDoc[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [allTime, setAllTime] = useState(true);
@@ -39,12 +41,20 @@ export function TeacherExportPage() {
     if (!user) return;
     let active = true;
 
+    const applyClasses = (list: ClassDoc[]) => {
+      const visible = list.filter((c) => !c.archived);
+      setClasses(visible);
+      const preselect =
+        preselectClassId && visible.some((c) => c.classId === preselectClassId)
+          ? [preselectClassId]
+          : visible.map((c) => c.classId);
+      setSelectedIds(new Set(preselect));
+    };
+
     void (async () => {
       const cached = await getAllCachedClasses(user.uid);
       if (active && cached.length > 0) {
-        const sorted = cached.sort((a, b) => b.createdAt - a.createdAt);
-        setClasses(sorted);
-        setSelectedIds(new Set(sorted.map((c) => c.classId)));
+        applyClasses(cached.sort((a, b) => b.createdAt - a.createdAt));
       }
 
       if (navigator.onLine) {
@@ -56,8 +66,7 @@ export function TeacherExportPage() {
           const remote = snap.docs
             .map((d) => d.data() as ClassDoc)
             .sort((a, b) => b.createdAt - a.createdAt);
-          setClasses(remote);
-          setSelectedIds(new Set(remote.map((c) => c.classId)));
+          applyClasses(remote);
           await putCachedClasses(remote);
         } catch {
           // Use IDB cache
@@ -68,7 +77,7 @@ export function TeacherExportPage() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [user, preselectClassId]);
 
   const toggleClass = (classId: string) => {
     setSelectedIds((prev) => {

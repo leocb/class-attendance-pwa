@@ -20,6 +20,15 @@ export interface GetRotationSelfieResponse {
   selfieDataUrl: string;
 }
 
+export type ManageClassAction = 'rename' | 'archive' | 'unarchive';
+
+export interface ManageClassResponse {
+  classId: string;
+  action: ManageClassAction;
+  name?: string;
+  archived?: boolean;
+}
+
 const registerFirstScanCallable = httpsCallable<
   { qrPayload: QrPayload; classId: string },
   RegisterFirstScanResponse
@@ -34,6 +43,11 @@ const getRotationSelfieCallable = httpsCallable<
   { qrPayload: QrPayload; classId: string },
   GetRotationSelfieResponse
 >(functions, 'getRotationSelfie');
+
+const manageClassCallable = httpsCallable<
+  { classId: string; action: ManageClassAction; name?: string },
+  ManageClassResponse
+>(functions, 'manageClass');
 
 export async function callRegisterFirstScan(
   qrPayload: QrPayload,
@@ -56,5 +70,19 @@ export async function callGetRotationSelfie(
   classId: string
 ): Promise<GetRotationSelfieResponse> {
   const result = await getRotationSelfieCallable({ qrPayload, classId });
+  return result.data;
+}
+
+export async function callManageClass(
+  classId: string,
+  action: ManageClassAction,
+  name?: string
+): Promise<ManageClassResponse> {
+  const payload: { classId: string; action: ManageClassAction; name?: string } = {
+    classId,
+    action,
+  };
+  if (name) payload.name = name;
+  const result = await manageClassCallable(payload);
   return result.data;
 }
