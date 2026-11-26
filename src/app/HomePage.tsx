@@ -147,6 +147,34 @@ export function HomePage() {
           {t('installPwaDesc')}
         </p>
       </div>
+
+      <footer className="app-footer muted">
+        <span>
+          v{__APP_VERSION__}
+          {__APP_COMMIT__ ? (
+            <>
+              {' · '}
+              <a
+                href={`https://github.com/leocb/class-attendance-pwa/commit/${__APP_COMMIT__}`}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                {__APP_COMMIT__.slice(0, 7)}
+              </a>
+            </>
+          ) : null}
+        </span>
+        <span>
+          {t('createdBy')}:{' '}
+          <a
+            href="https://github.com/leocb"
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            github.com/leocb
+          </a>
+        </span>
+      </footer>
     </div>
   );
 }
