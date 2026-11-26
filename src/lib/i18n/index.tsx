@@ -88,8 +88,6 @@ const en = {
   errMissingSelfie: 'Please capture or upload a selfie photo.',
   errExistingKey:
     'A key already exists on this device. Open your QR or use Recovery if needed.',
-  errDuplicateSid:
-    'This School Student ID is already registered. If you got a new phone or cleared storage, use Key Recovery.',
   errRegFailed: 'Student registration failed.',
   regSuccess:
     'Registration complete. Your teacher will add you when they scan your QR.',
@@ -323,8 +321,6 @@ const ptBR: Record<TranslationKey, string> = {
   errMissingSelfie: 'Capture ou envie uma foto selfie.',
   errExistingKey:
     'Já existe uma chave neste dispositivo. Abra seu QR ou use Recuperação.',
-  errDuplicateSid:
-    'Esta matrícula já está cadastrada. Se você trocou de celular ou limpou o navegador, use Recuperar Chave.',
   errRegFailed: 'Falha ao cadastrar aluno.',
   regSuccess:
     'Cadastro concluído. Seu professor adicionará você à turma ao ler seu QR.',

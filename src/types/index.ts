@@ -12,9 +12,11 @@ export interface Student {
   keyFingerprint: string;
   selfiePath: string; // Firebase Storage path: selfies/{sid}/{fp}.webp
   selfieHash: string; // hex SHA-256 of WebP bytes
+  teacherUid?: string; // owner teacher (records are scoped per teacher)
   registrationTimestamp: number;
-  authorizedTeacherUids: string[];
   rotatedKeys: RotatedKeyEntry[];
+  lastRotationNonce?: string;
+  lastRotationTs?: number;
 }
 
 export interface ClassDoc {
@@ -65,7 +67,6 @@ export interface StudentProfile {
   selfieUploaded: boolean;
   registrationTimestamp: number;
   isRecovery: boolean;
-  firestoreSynced: boolean;
 }
 
 export interface CachedSelfie {

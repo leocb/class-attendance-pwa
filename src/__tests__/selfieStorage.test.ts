@@ -39,7 +39,6 @@ function baseStudent(overrides: Partial<Student>): Student {
     selfiePath: 'selfies/S1001/ABCD2345.webp',
     selfieHash: '',
     registrationTimestamp: 1700000000000,
-    authorizedTeacherUids: [],
     rotatedKeys: [],
     ...overrides,
   };

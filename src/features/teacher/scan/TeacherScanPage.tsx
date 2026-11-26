@@ -38,6 +38,7 @@ import {
   selfieCacheKey,
 } from '../../../lib/idb';
 import { useI18n } from '../../../lib/i18n';
+import { studentDocId } from '../../../lib/studentKey';
 import { getLocalSessionDate } from '../../../lib/time';
 import {
   SelfieZoomModal,
@@ -183,7 +184,7 @@ export function TeacherScanPage() {
   }, [user, classId, today]);
 
   useEffect(() => {
-    if (!classDoc) return;
+    if (!user || !classDoc) return;
     const sids = classDoc.studentIds;
     if (sids.length === 0) return;
 
@@ -204,12 +205,15 @@ export function TeacherScanPage() {
         if (cached) void cacheStudentAndSelfie(cached);
       });
 
-      const unsub = onSnapshot(doc(db, 'students', sid), (snap) => {
-        if (!active || !snap.exists()) return;
-        const st = snap.data() as Student;
-        void putCachedStudent(st);
-        void cacheStudentAndSelfie(st);
-      });
+      const unsub = onSnapshot(
+        doc(db, 'students', studentDocId(user.uid, sid)),
+        (snap) => {
+          if (!active || !snap.exists()) return;
+          const st = snap.data() as Student;
+          void putCachedStudent(st);
+          void cacheStudentAndSelfie(st);
+        }
+      );
       unsubs.push(unsub);
     }
 
@@ -217,7 +221,7 @@ export function TeacherScanPage() {
       active = false;
       for (const u of unsubs) u();
     };
-  }, [classDoc?.studentIds.join(',')]);
+  }, [user, classDoc?.studentIds.join(',')]);
 
   const buildDeps = useCallback((): ScanPipelineDeps => {
     return {

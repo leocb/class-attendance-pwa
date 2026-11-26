@@ -30,7 +30,6 @@ async function createStudentFixture(sid = 'S1001', name = 'Alice Rivera') {
     selfiePath: `selfies/${sid}/${keyFingerprint}.webp`,
     selfieHash,
     registrationTimestamp: 1700000000000,
-    authorizedTeacherUids: [],
     rotatedKeys: [],
   };
 
@@ -93,7 +92,7 @@ function makeMemoryDeps(overrides?: Partial<ScanPipelineDeps>) {
     registerFirstScan: vi.fn(async (qr) => {
       const st = studentCache.get(`server:${qr.sid}`);
       if (!st) throw new Error('Not found');
-      const updated = { ...st, authorizedTeacherUids: ['teacher-1'] };
+      const updated = { ...st };
       return { status: 'REGISTERED' as const, student: updated };
     }),
     getRotationSelfie: vi.fn(async () => ({
@@ -159,7 +158,7 @@ describe('Teacher Scan Pipeline (Storage + Local Cache)', () => {
     const online = makeMemoryDeps({
       registerFirstScan: vi.fn(async () => ({
         status: 'REGISTERED' as const,
-        student: { ...student, authorizedTeacherUids: ['teacher-1'] },
+        student: { ...student },
       })),
     });
     const resOnline = await processScannedQr(
@@ -188,7 +187,7 @@ describe('Teacher Scan Pipeline (Storage + Local Cache)', () => {
     const { deps } = makeMemoryDeps({
       registerFirstScan: vi.fn(async () => ({
         status: 'REGISTERED' as const,
-        student: { ...student, authorizedTeacherUids: ['teacher-1'] },
+        student: { ...student },
         selfieDataUrl: serverSelfie,
       })),
       ensureStudentSelfieCached: ensureSelfie,

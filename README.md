@@ -1,6 +1,6 @@
 # Class Attendance — Offline-First Classroom Attendance PWA
 
-Production-ready, offline-first Progressive Web App for classroom attendance using compact rotating ECDSA-signed student QR codes, Firebase Storage HD selfies, and passkey-only teacher authentication. Localized in **English (`en`)** and **Português (Brasil) (`pt-BR`)** with automatic browser detection and a navbar language selector.
+Production-ready, offline-first Progressive Web App for classroom attendance (student records are scoped per teacher, so school IDs may repeat across teachers) using compact rotating ECDSA-signed student QR codes, Firebase Storage HD selfies, and passkey-only teacher authentication. Localized in **English (`en`)** and **Português (Brasil) (`pt-BR`)** with automatic browser detection and a navbar language selector.
 
 - **Live Production URL**: `https://alunos.leobottaro.com` (Cloudflare Workers + Static Assets)
 - **Firebase Project**: `classroom-attendance-a03af` (`southamerica-east1` — São Paulo)

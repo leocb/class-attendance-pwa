@@ -108,7 +108,6 @@ export function StudentRecoverPage() {
         selfieUploaded,
         registrationTimestamp: Date.now(),
         isRecovery: true,
-        firestoreSynced: false,
       };
 
       await saveStudentProfile(profile);

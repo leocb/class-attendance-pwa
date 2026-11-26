@@ -27,11 +27,13 @@ Always consult [README.md](README.md) (**Updating & Redeploying**) before modify
 - **Teacher Auth**: WebAuthn passkeys only (`passkeyAuth` Cloud Function minting custom tokens with `{ teacher: true }`). Never add email/password auth or account recovery.
 - **Student Auth & Crypto**: Anonymous auth (`signInAnonymously`) at registration only; non-extractable ECDSA P-256 keys (`extractable: false`) stored as `CryptoKey` in IndexedDB (`student-private-key`). Never allow client registration to overwrite an existing key outside `/student/recover`.
 - **Selfie Storage & Compact QR**:
-  - Student selfies (512×512 WebP, ≤ 1 MB) live in Firebase Storage at `selfies/{sid}/{fp}.webp` (`storage.rules`), NOT inside the QR payload.
+  - Students upload selfies (512×512 WebP, ≤ 1 MB) to `selfies/{sid}/{fp}.webp`; clients can create but never read these (Cloud Functions use the Admin SDK).
+  - Cloud Functions copy each verified selfie to `teacher-selfies/{teacherUid}/{sid}/{fp}.webp`; only the owning teacher can read that copy (`storage.rules`). `students.selfiePath` always points at the teacher copy.
   - QR payloads sign `sh` (SHA-256 hex of the WebP bytes) inside `v1|sid|n|ts|nce|fp|sh`; the payload always carries the student public key (`pk`) so scan-time key rotation is possible.
   - Teacher devices download & hash-verify selfies on first scan / rotation and cache them in IndexedDB (`cache:selfies`) for offline scanning and roster views.
 - **Firestore Rules & Collections**:
-  - Never allow client-side `update`/`delete` on `students` or `classes`, and never allow `list` on `students`.
+  - Student records are scoped per teacher: document id `students/{teacherUid}__{sid}`. School IDs may repeat across teachers (e.g. different schools) but are unique within a teacher's roster. Classes reference students by `sid` and clients build the composite id with their own uid.
+  - Never allow client-side create/`update`/`delete` on `students` or `classes`, and never allow `list` on `students`.
   - Do not introduce `sessions` or `keyRotationRequests` collections or manual "add student by ID" UI.
   - Keep `functions/.env` (`WEBAUTHN_RP_ID`, `WEBAUTHN_ORIGIN`, `TURNSTILE_SECRET`, `TURNSTILE_HOSTNAMES`) and `.env` gitignored.
 - **Bot Protection**: Teacher passkey login/registration and online student registration/recovery use Cloudflare Turnstile (`TurnstileWidget` + server-side `verifyTurnstileToken` checking `success`, `action`, and `TURNSTILE_HOSTNAMES`).

@@ -38,6 +38,7 @@ import {
   putCachedStudent,
 } from '../../../lib/idb';
 import { useI18n } from '../../../lib/i18n';
+import { studentDocId } from '../../../lib/studentKey';
 import {
   SelfieZoomModal,
   type ZoomedSelfie,
@@ -250,7 +251,9 @@ export function TeacherClassesPage() {
     const studentResults = await Promise.all(
       cls.studentIds.map(async (sid) => {
         try {
-          const snap = await getDoc(doc(db, 'students', sid));
+          const snap = await getDoc(
+            doc(db, 'students', studentDocId(user.uid, sid))
+          );
           if (snap.exists()) {
             const student = snap.data() as Student;
             await putCachedStudent(student);

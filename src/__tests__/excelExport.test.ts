@@ -16,7 +16,6 @@ function makeStudent(sid: string, name: string): Student {
     selfiePath: `selfies/${sid}/ABCD2345.webp`,
     selfieHash: '',
     registrationTimestamp: 1,
-    authorizedTeacherUids: ['t1'],
     rotatedKeys: [],
   };
 }

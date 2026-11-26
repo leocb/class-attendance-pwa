@@ -1,15 +1,11 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Original selfies uploaded by students. Only Cloud Functions read these
+    // (Admin SDK bypasses rules); clients upload but never download.
     match /selfies/{sid}/{fileName} {
-      // Only teachers authorized for this student can download directly.
-      allow get: if request.auth != null
-        && request.auth.token.teacher == true
-        && request.auth.uid in firestore.get(/databases/(default)/documents/students/$(sid)).data.authorizedTeacherUids;
+      allow get, list: if false;
 
-      allow list: if false;
-
-      // Students upload their own immutable WebP selfie (<= 1 MB, exact fingerprint filename).
       allow create: if request.auth != null
         && sid.size() >= 1 && sid.size() <= 64
         && fileName.matches('^[A-Z2-7]{8}\\.webp$')
@@ -21,6 +17,15 @@ service firebase.storage {
         && fileName == request.resource.metadata.fingerprint + '.webp';
 
       allow update, delete: if false;
+    }
+
+    // Per-teacher verified copies. The CF writes them; the owning teacher reads.
+    match /teacher-selfies/{teacherUid}/{sid}/{fileName} {
+      allow get: if request.auth != null
+        && request.auth.token.teacher == true
+        && request.auth.uid == teacherUid;
+
+      allow list, create, update, delete: if false;
     }
   }
 }

@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { doc, setDoc } from 'firebase/firestore';
 import { ShieldCheck, KeyRound } from 'lucide-react';
 import { SelfieCapture } from '../../../components/SelfieCapture';
 import { TurnstileWidget } from '../../../components/TurnstileWidget';
@@ -23,14 +22,13 @@ import {
   ensureStudentAnonymousAuth,
   verifyOnlineTurnstile,
 } from '../../../lib/firebase/auth';
-import { db } from '../../../lib/firebase/client';
 import {
   buildSelfieStoragePath,
   uploadStudentSelfie,
 } from '../../../lib/firebase/storage';
 import { syncServerOffset } from '../../../lib/time';
 import { useI18n } from '../../../lib/i18n';
-import type { Student, StudentProfile } from '../../../types';
+import type { StudentProfile } from '../../../types';
 
 export function StudentRegisterPage() {
   const navigate = useNavigate();
@@ -120,19 +118,6 @@ export function StudentRegisterPage() {
         selfieUploaded = true;
       }
 
-      const studentDoc: Student = {
-        schoolStudentId: sid,
-        name: fullName,
-        deviceUid: user.uid,
-        publicKeyJwk,
-        keyFingerprint,
-        selfiePath,
-        selfieHash,
-        registrationTimestamp,
-        authorizedTeacherUids: [],
-        rotatedKeys: [],
-      };
-
       const profile: StudentProfile = {
         schoolStudentId: sid,
         name: fullName,
@@ -146,30 +131,9 @@ export function StudentRegisterPage() {
         selfieUploaded,
         registrationTimestamp,
         isRecovery: false,
-        firestoreSynced: false,
       };
 
       await saveStudentProfile(profile);
-
-      const writePromise = setDoc(doc(db, 'students', sid), studentDoc).then(
-        async () => {
-          await saveStudentProfile({ ...profile, firestoreSynced: true });
-        }
-      );
-
-      if (navigator.onLine) {
-        try {
-          await writePromise;
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          if (msg.includes('permission-denied') || msg.includes('PERMISSION_DENIED')) {
-            throw new LocalizedError('errDuplicateSid');
-          }
-          void writePromise.catch(() => {});
-        }
-      } else {
-        void writePromise.catch(() => {});
-      }
 
       setSuccessMsg(t('regSuccess'));
       window.setTimeout(() => {

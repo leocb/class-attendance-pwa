@@ -8,7 +8,11 @@ import {
   verifyQrSignature,
 } from './crypto';
 import { studentNamesMatch } from './names';
-import { downloadAndVerifySelfieFromStorage } from './storageHelper';
+import {
+  downloadAndVerifySelfieFromStorage,
+  storeTeacherSelfieCopy,
+} from './storageHelper';
+import { studentDocId } from './studentKey';
 
 const requestSchema = z.object({
   qrPayload: qrPayloadSchema,
@@ -65,10 +69,18 @@ export const approveRotation = onCall(async (request) => {
     qrPayload.fp,
     qrPayload.sh
   );
+  const teacherSelfiePath = await storeTeacherSelfieCopy(
+    teacherUid,
+    qrPayload.sid,
+    qrPayload.fp,
+    verifiedSelfie.bytes
+  );
 
   const db = getFirestore();
   const classRef = db.collection('classes').doc(classId);
-  const studentRef = db.collection('students').doc(qrPayload.sid);
+  const studentRef = db
+    .collection('students')
+    .doc(studentDocId(teacherUid, qrPayload.sid));
 
   const updatedStudent = await db.runTransaction(async (tx) => {
     const [classSnap, studentSnap] = await Promise.all([
@@ -119,12 +131,6 @@ export const approveRotation = onCall(async (request) => {
       oldEntry,
     ];
 
-    const authorizedTeacherUids: string[] = Array.isArray(
-      existing.authorizedTeacherUids
-    )
-      ? Array.from(new Set([...existing.authorizedTeacherUids, teacherUid]))
-      : [teacherUid];
-
     const cleanNewJwk = {
       kty: qrPayload.pk!.kty,
       crv: qrPayload.pk!.crv,
@@ -137,12 +143,11 @@ export const approveRotation = onCall(async (request) => {
     tx.update(studentRef, {
       publicKeyJwk: cleanNewJwk,
       keyFingerprint: qrPayload.fp,
-      selfiePath: verifiedSelfie.path,
+      selfiePath: teacherSelfiePath,
       selfieHash: qrPayload.sh,
       rotatedKeys: nextRotatedKeys,
       lastRotationNonce: qrPayload.nce,
       lastRotationTs: qrPayload.ts,
-      authorizedTeacherUids: FieldValue.arrayUnion(teacherUid),
     });
 
     tx.update(classRef, {
@@ -153,10 +158,9 @@ export const approveRotation = onCall(async (request) => {
       ...existing,
       publicKeyJwk: cleanNewJwk,
       keyFingerprint: qrPayload.fp,
-      selfiePath: verifiedSelfie.path,
+      selfiePath: teacherSelfiePath,
       selfieHash: qrPayload.sh,
       rotatedKeys: nextRotatedKeys,
-      authorizedTeacherUids,
     };
   });
 

@@ -10,9 +10,11 @@ import {
 } from './crypto';
 import { studentNamesMatch } from './names';
 import {
-  buildSelfieStoragePath,
+  buildTeacherSelfiePath,
   downloadAndVerifySelfieFromStorage,
+  storeTeacherSelfieCopy,
 } from './storageHelper';
+import { studentDocId } from './studentKey';
 
 const requestSchema = z.object({
   qrPayload: qrPayloadSchema,
@@ -44,7 +46,11 @@ export const registerFirstScan = onCall(async (request) => {
   }
 
   const classRef = db.collection('classes').doc(classId);
-  const studentRef = db.collection('students').doc(qrPayload.sid);
+  // Student identity is scoped to this teacher so school IDs may repeat across
+  // teachers while staying unique within a roster.
+  const studentRef = db
+    .collection('students')
+    .doc(studentDocId(teacherUid, qrPayload.sid));
 
   const txResult = await db.runTransaction(async (tx) => {
     const [classSnap, studentSnap] = await Promise.all([
@@ -61,82 +67,136 @@ export const registerFirstScan = onCall(async (request) => {
       throw new HttpsError('permission-denied', 'You do not own this class.');
     }
 
-    if (!studentSnap.exists) {
-      throw new HttpsError(
-        'not-found',
-        'Student is not registered yet. Ask the student to complete registration while online first.'
+    // Existing record for this teacher: verify the QR against the stored key.
+    if (studentSnap.exists) {
+      const student = studentSnap.data()!;
+
+      if (!studentNamesMatch(qrPayload.n, student.name)) {
+        throw new HttpsError(
+          'permission-denied',
+          'QR student name does not match registered student record.'
+        );
+      }
+
+      if (qrPayload.fp !== student.keyFingerprint) {
+        return {
+          status: 'ROTATION_REQUIRED' as const,
+          student,
+        };
+      }
+
+      if (qrPayload.sh !== student.selfieHash) {
+        throw new HttpsError(
+          'permission-denied',
+          'QR selfie hash does not match registered student record.'
+        );
+      }
+
+      const storedJwk = ecPublicJwkSchema.parse(student.publicKeyJwk);
+      if (computeFingerprintFromJwk(storedJwk) !== qrPayload.fp) {
+        throw new HttpsError('permission-denied', 'Key fingerprint mismatch.');
+      }
+
+      if (!verifyQrSignature(storedJwk, qrPayload)) {
+        throw new HttpsError(
+          'permission-denied',
+          'Invalid QR cryptographic signature.'
+        );
+      }
+
+      const verified = await downloadAndVerifySelfieFromStorage(
+        qrPayload.sid,
+        qrPayload.fp,
+        qrPayload.sh
       );
-    }
-
-    const student = studentSnap.data()!;
-
-    if (!studentNamesMatch(qrPayload.n, student.name)) {
-      throw new HttpsError(
-        'permission-denied',
-        'QR student name does not match registered student record.'
+      const expectedTeacherPath = buildTeacherSelfiePath(
+        teacherUid,
+        qrPayload.sid,
+        qrPayload.fp
       );
-    }
+      let selfiePath: string = student.selfiePath;
+      if (selfiePath !== expectedTeacherPath) {
+        selfiePath = await storeTeacherSelfieCopy(
+          teacherUid,
+          qrPayload.sid,
+          qrPayload.fp,
+          verified.bytes
+        );
+        tx.update(studentRef, { selfiePath });
+      }
 
-    if (qrPayload.fp !== student.keyFingerprint) {
+      tx.update(classRef, {
+        studentIds: FieldValue.arrayUnion(qrPayload.sid),
+      });
+
       return {
-        status: 'ROTATION_REQUIRED' as const,
-        student,
+        status: 'REGISTERED' as const,
+        selfieDataUrl: verified.dataUrl,
+        student: { ...student, selfiePath },
       };
     }
 
-    if (qrPayload.sh !== student.selfieHash) {
+    // First scan for this teacher: the QR is self-signed, so it supplies the
+    // identity. The teacher's visual selfie check remains the authorization gate.
+    if (!qrPayload.pk) {
+      throw new HttpsError(
+        'invalid-argument',
+        'QR code is missing the student public key. Update the student app.'
+      );
+    }
+    if (computeFingerprintFromJwk(qrPayload.pk) !== qrPayload.fp) {
       throw new HttpsError(
         'permission-denied',
-        'QR selfie hash does not match registered student record.'
+        'Public key does not match QR fingerprint.'
+      );
+    }
+    if (!verifyQrSignature(qrPayload.pk, qrPayload)) {
+      throw new HttpsError(
+        'permission-denied',
+        'Invalid QR cryptographic signature.'
       );
     }
 
-    const expectedPath = buildSelfieStoragePath(qrPayload.sid, qrPayload.fp);
-    if (student.selfiePath !== expectedPath) {
-      throw new HttpsError(
-        'permission-denied',
-        'Student selfie storage path mismatch.'
-      );
-    }
-
-    const storedJwk = ecPublicJwkSchema.parse(student.publicKeyJwk);
-    if (computeFingerprintFromJwk(storedJwk) !== qrPayload.fp) {
-      throw new HttpsError('permission-denied', 'Key fingerprint mismatch.');
-    }
-
-    if (!verifyQrSignature(storedJwk, qrPayload)) {
-      throw new HttpsError('permission-denied', 'Invalid QR cryptographic signature.');
-    }
-
-    // Verify selfie exists in Storage and matches the signed SHA-256 hash
-    // We download it here (admin SDK bypasses Storage rules) so the teacher
-    // client can display it immediately without a second download race.
     const verified = await downloadAndVerifySelfieFromStorage(
       qrPayload.sid,
       qrPayload.fp,
       qrPayload.sh
     );
+    const teacherSelfiePath = await storeTeacherSelfieCopy(
+      teacherUid,
+      qrPayload.sid,
+      qrPayload.fp,
+      verified.bytes
+    );
 
-    tx.update(studentRef, {
-      authorizedTeacherUids: FieldValue.arrayUnion(teacherUid),
-    });
+    const student = {
+      schoolStudentId: qrPayload.sid,
+      name: qrPayload.n,
+      teacherUid,
+      publicKeyJwk: {
+        kty: qrPayload.pk.kty,
+        crv: qrPayload.pk.crv,
+        x: qrPayload.pk.x,
+        y: qrPayload.pk.y,
+        ext: true,
+        key_ops: ['verify'],
+      },
+      keyFingerprint: qrPayload.fp,
+      selfiePath: teacherSelfiePath,
+      selfieHash: qrPayload.sh,
+      registrationTimestamp: Date.now(),
+      rotatedKeys: [],
+    };
+
+    tx.set(studentRef, student);
     tx.update(classRef, {
       studentIds: FieldValue.arrayUnion(qrPayload.sid),
     });
 
-    const authorizedTeacherUids: string[] = Array.isArray(
-      student.authorizedTeacherUids
-    )
-      ? Array.from(new Set([...student.authorizedTeacherUids, teacherUid]))
-      : [teacherUid];
-
     return {
       status: 'REGISTERED' as const,
       selfieDataUrl: verified.dataUrl,
-      student: {
-        ...student,
-        authorizedTeacherUids,
-      },
+      student,
     };
   });
 

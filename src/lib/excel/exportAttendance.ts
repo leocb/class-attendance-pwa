@@ -134,7 +134,6 @@ export async function buildAttendanceWorkbook(
           selfiePath: '',
           selfieHash: '',
           registrationTimestamp: 0,
-          authorizedTeacherUids: [],
           rotatedKeys: [],
         });
       }
