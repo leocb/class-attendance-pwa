@@ -90,14 +90,14 @@ describe('Offline ExcelJS Export (§10)', () => {
     expect(bioSheet.name.length).toBeLessThanOrEqual(31);
     expect(bioSheet.views[0]).toMatchObject({ state: 'frozen', ySplit: 1 });
 
-    // Bio headers: Student ID | Name | 2026-11-10 | 2026-11-11 | Presence %
+    // Bio headers: Student ID | Name | Presence % | 2026-11-10 | 2026-11-11
     expect(bioSheet.getRow(1).values).toEqual([
       undefined,
       'Student ID',
       'Name',
+      'Presence %',
       '2026-11-10',
       '2026-11-11',
-      'Presence %',
     ]);
 
     // Alice: present on 11-10, no session on 11-11 ('—'), 100% presence
@@ -105,29 +105,29 @@ describe('Offline ExcelJS Export (§10)', () => {
       undefined,
       'S1',
       'Alice',
+      1,
       '✓',
       '—',
-      1,
     ]);
     // Bob: absent on 11-10 ('A'), no session on 11-11 ('—'), 0% presence
     expect(bioSheet.getRow(3).values).toEqual([
       undefined,
       'S2',
       'Bob',
+      0,
       'A',
       '—',
-      0,
     ]);
-    expect(bioSheet.getRow(2).getCell(5).numFmt).toBe('0.0%');
+    expect(bioSheet.getRow(2).getCell(3).numFmt).toBe('0.0%');
 
     // Chem: Carol no session on 11-10 ('—'), present on 11-11 ('✓')
     expect(chemSheet.getRow(2).values).toEqual([
       undefined,
       'S3',
       'Carol',
+      1,
       '—',
       '✓',
-      1,
     ]);
 
     expect(summarySheet.name).toBe('Summary');

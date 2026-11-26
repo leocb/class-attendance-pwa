@@ -110,8 +110,8 @@ export async function buildAttendanceWorkbook(
     const headers = [
       labels.studentId,
       labels.name,
-      ...sortedAllDates,
       labels.presencePct,
+      ...sortedAllDates,
     ];
     const headerRow = sheet.addRow(headers);
     headerRow.font = { bold: true };
@@ -162,14 +162,14 @@ export async function buildAttendanceWorkbook(
       const row = sheet.addRow([
         student.schoolStudentId,
         student.name,
-        ...dateCells,
         presenceRatio,
+        ...dateCells,
       ]);
 
-      const pctCell = row.getCell(headers.length);
+      const pctCell = row.getCell(3);
       pctCell.numFmt = '0.0%';
 
-      for (let col = 3; col < headers.length; col++) {
+      for (let col = 3; col <= headers.length; col++) {
         row.getCell(col).alignment = { horizontal: 'center' };
       }
 
@@ -191,7 +191,7 @@ export async function buildAttendanceWorkbook(
     sheet.columns.forEach((column, idx) => {
       if (idx === 0) column.width = 16;
       else if (idx === 1) column.width = 24;
-      else if (idx === headers.length - 1) column.width = 14;
+      else if (idx === 2) column.width = 14;
       else column.width = 13;
     });
   }
