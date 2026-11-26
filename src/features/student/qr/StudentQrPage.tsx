@@ -8,6 +8,7 @@ import {
   saveStudentProfile,
 } from '../../../lib/idb';
 import { ensureStudentAnonymousAuth } from '../../../lib/firebase/auth';
+import { callGetKeyStatus } from '../../../lib/firebase/functions';
 import { uploadStudentSelfie } from '../../../lib/firebase/storage';
 import { errorMessage } from '../../../lib/errors';
 import { createSignedQrPayload, renderQrToCanvas } from '../../../lib/qr';
@@ -80,6 +81,37 @@ export function StudentQrPage() {
       void syncPendingPhoto();
     }
   }, [isOnline, profile, syncPendingPhoto]);
+
+  // A regenerated key shows a banner until a teacher approves the rotation.
+  // Poll the key status and clear the banner once the key is registered.
+  useEffect(() => {
+    if (!profile?.isRecovery || !isOnline) return;
+    let active = true;
+
+    const check = async () => {
+      try {
+        await ensureStudentAnonymousAuth();
+        const { registered } = await callGetKeyStatus(
+          profile.schoolStudentId,
+          profile.keyFingerprint
+        );
+        if (active && registered) {
+          const updated: StudentProfile = { ...profile, isRecovery: false };
+          await saveStudentProfile(updated);
+          setProfile(updated);
+        }
+      } catch {
+        // Retry on the next tick.
+      }
+    };
+
+    void check();
+    const timer = window.setInterval(() => void check(), 10_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [profile?.isRecovery, profile?.schoolStudentId, profile?.keyFingerprint, isOnline]);
 
   const regenerateQr = useCallback(async () => {
     if (!profile || !privateKey || !canvasRef.current) return;

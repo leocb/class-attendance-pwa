@@ -8,6 +8,7 @@ export { manageClass } from './manageClass';
 export { registerFirstScan } from './registerFirstScan';
 export { approveRotation } from './approveRotation';
 export { getRotationSelfie } from './getRotationSelfie';
+export { getKeyStatus } from './keyStatus';
 export { getServerTime } from './getServerTime';
 export { passkeyAuth } from './passkeyAuth';
 export { verifyTurnstile } from './turnstile';

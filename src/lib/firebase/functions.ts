@@ -45,6 +45,11 @@ const getRotationSelfieCallable = httpsCallable<
   GetRotationSelfieResponse
 >(functions, 'getRotationSelfie');
 
+const getKeyStatusCallable = httpsCallable<
+  { sid: string; fp: string },
+  { registered: boolean }
+>(functions, 'getKeyStatus');
+
 const manageClassCallable = httpsCallable<
   { classId: string; action: ManageClassAction; name?: string },
   ManageClassResponse
@@ -85,5 +90,13 @@ export async function callManageClass(
   };
   if (name) payload.name = name;
   const result = await manageClassCallable(payload);
+  return result.data;
+}
+
+export async function callGetKeyStatus(
+  sid: string,
+  fp: string
+): Promise<{ registered: boolean }> {
+  const result = await getKeyStatusCallable({ sid, fp });
   return result.data;
 }
