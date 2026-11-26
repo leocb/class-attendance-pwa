@@ -86,6 +86,10 @@ async function encodeCanvasWebP(canvas: HTMLCanvasElement): Promise<EncodedSelfi
   };
 }
 
+/**
+ * Draws the raw (unmirrored) camera frame. The on-screen preview is mirrored
+ * with CSS for a natural selfie view; the stored selfie must not be mirrored.
+ */
 export async function captureSelfieFromVideo(
   video: HTMLVideoElement
 ): Promise<EncodedSelfie> {

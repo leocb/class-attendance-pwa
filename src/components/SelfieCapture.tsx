@@ -117,7 +117,26 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
       ) : cameraActive ? (
         <div className="stack-sm">
           <div className="scanner-viewport" style={{ maxWidth: 280 }}>
-            <video ref={videoRef} autoPlay playsInline muted />
+            {/* Preview only mirrors the front camera; the saved selfie stays unmirrored. */}
+            <video ref={videoRef} autoPlay playsInline muted className="selfie-mirror" />
+            <svg
+              className="selfie-face-guide"
+              viewBox="0 0 100 100"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <ellipse
+                className="face-guide-stroke"
+                cx="50"
+                cy="42"
+                rx="21"
+                ry="27"
+              />
+              <path
+                className="face-guide-stroke"
+                d="M22 88c3-12 13-19 28-19s25 7 28 19"
+              />
+            </svg>
           </div>
           <div className="row">
             <button type="button" className="btn btn-primary" onClick={handleSnap}>
