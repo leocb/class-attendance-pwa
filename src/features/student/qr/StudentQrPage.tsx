@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { KeyRound, RefreshCw, Settings, UploadCloud } from 'lucide-react';
+import { KeyRound, RefreshCw, UploadCloud } from 'lucide-react';
 import { CONFIG } from '../../../lib/config';
 import {
   getStudentPrivateKey,
@@ -269,14 +269,6 @@ export function StudentQrPage() {
         </Link>
       </div>
 
-      <Link
-        to="/"
-        className="qr-options-fab"
-        aria-label={t('options')}
-        title={t('options')}
-      >
-        <Settings size={22} />
-      </Link>
     </div>
   );
 }

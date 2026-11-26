@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
   Download,
   Globe,
   LogOut,
   QrCode,
+  Settings,
   Wifi,
   WifiOff,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const { isOnline, isTeacher } = useApp();
   const { locale, setLocale, t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const [installEvent, setInstallEvent] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [langOpen, setLangOpen] = useState(false);
@@ -79,6 +81,17 @@ export function Layout({ children }: { children: ReactNode }) {
             {isOnline ? <Wifi size={13} /> : <WifiOff size={13} />}
             {isOnline ? t('online') : t('offline')}
           </span>
+
+          {location.pathname === '/student/qr' && (
+            <Link
+              to="/"
+              className="btn btn-sm"
+              aria-label={t('options')}
+              title={t('options')}
+            >
+              <Settings size={14} />
+            </Link>
+          )}
 
           <div ref={langMenuRef} style={{ position: 'relative' }}>
             <button
