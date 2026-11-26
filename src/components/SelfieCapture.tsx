@@ -128,13 +128,13 @@ export function SelfieCapture({ value, onChange }: SelfieCaptureProps) {
               <ellipse
                 className="face-guide-stroke"
                 cx="50"
-                cy="42"
+                cy="40"
                 rx="21"
-                ry="27"
+                ry="26"
               />
               <path
                 className="face-guide-stroke"
-                d="M22 88c3-12 13-19 28-19s25 7 28 19"
+                d="M20 90c4-12 13-18 30-18s26 6 30 18"
               />
             </svg>
           </div>
