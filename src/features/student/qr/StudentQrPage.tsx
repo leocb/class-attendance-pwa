@@ -24,7 +24,6 @@ export function StudentQrPage() {
   const [privateKey, setPrivateKey] = useState<CryptoKey | null>(null);
   const [remainingMs, setRemainingMs] = useState<number>(CONFIG.QR_REFRESH_MS);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number>(Date.now());
-  const [payloadSize, setPayloadSize] = useState<number>(0);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,7 +89,6 @@ export function StudentQrPage() {
         privateKey,
       });
       await renderQrToCanvas(canvasRef.current, serialized);
-      setPayloadSize(serialized.length);
       setLastUpdatedAt(Date.now());
       setRemainingMs(CONFIG.QR_REFRESH_MS);
       setError(null);
@@ -234,9 +232,6 @@ export function StudentQrPage() {
             <span className="muted">
               · {t('refreshesIn', { seconds: secondsLeft })}
             </span>
-          </div>
-          <div className="muted" style={{ fontSize: '0.78rem' }}>
-            {payloadSize} {t('signedEcdsa')}
           </div>
         </div>
       </div>
