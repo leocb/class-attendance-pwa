@@ -79,6 +79,17 @@ export function TeacherExportPage() {
     };
   }, [user, preselectClassId]);
 
+  const allClassesSelected =
+    classes.length > 0 && classes.every((c) => selectedIds.has(c.classId));
+
+  const toggleAllClasses = () => {
+    setSelectedIds(
+      allClassesSelected
+        ? new Set()
+        : new Set(classes.map((c) => c.classId))
+    );
+  };
+
   const toggleClass = (classId: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -179,21 +190,27 @@ export function TeacherExportPage() {
           <ArrowLeft size={15} />
           {t('classes')}
         </Link>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.35rem' }}>{t('exportTitle')}</h1>
-          <p className="muted" style={{ margin: 0, fontSize: '0.88rem' }}>
-            {t('exportSubtitle')}
-          </p>
-        </div>
+        <h1 style={{ margin: 0, fontSize: '1.35rem' }}>{t('exportTitle')}</h1>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
       {success && <div className="alert alert-success">{success}</div>}
 
       <div className="card stack-md">
-        <div className="row">
-          <FileSpreadsheet size={20} />
-          <strong>{t('selectClasses')}</strong>
+        <div className="row-between">
+          <div className="row">
+            <FileSpreadsheet size={20} />
+            <strong>{t('selectClasses')}</strong>
+          </div>
+          {classes.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={toggleAllClasses}
+            >
+              {allClassesSelected ? t('selectNone') : t('selectAll')}
+            </button>
+          )}
         </div>
 
         {classes.length === 0 ? (

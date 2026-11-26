@@ -235,9 +235,9 @@ const en = {
 
   // Export
   exportTitle: 'Export Attendance (XLSX)',
-  exportSubtitle:
-    'Generated completely in-browser from local IndexedDB cache. Works offline.',
   selectClasses: 'Select Classes',
+  selectAll: 'Select all',
+  selectNone: 'Clear selection',
   noCachedClasses: 'No cached classes available yet.',
   allTime: 'All time',
   fromDate: 'From Date',
@@ -470,9 +470,9 @@ const ptBR: Record<TranslationKey, string> = {
 
   // Export
   exportTitle: 'Exportar Chamada (XLSX)',
-  exportSubtitle:
-    'Gerado totalmente no navegador a partir do cache local (IndexedDB). Funciona offline.',
   selectClasses: 'Selecionar Turmas',
+  selectAll: 'Selecionar todas',
+  selectNone: 'Limpar seleção',
   noCachedClasses: 'Nenhuma turma em cache ainda.',
   allTime: 'Todo o período',
   fromDate: 'Data Inicial',
